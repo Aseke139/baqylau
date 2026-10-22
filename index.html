@@ -103,6 +103,10 @@ h1{font-size:22px;font-weight:700;margin:0}
 .ditem small.z{background:none;color:var(--muted);font-weight:400}
 .dsep{height:1px;background:var(--line);margin:8px 18px}
 @media (prefers-reduced-motion:reduce){.drawer{transition:none}}
+.mvsheet{position:fixed;left:0;right:0;bottom:0;background:var(--surface);z-index:27;border-radius:16px 16px 0 0;box-shadow:0 -6px 24px rgba(0,0,0,.18);padding:14px 0 calc(14px + env(safe-area-inset-bottom,0px));max-height:80vh;overflow-y:auto}
+.mvsheet h3{margin:0 18px 4px;font-size:16px}
+.mvsheet p{margin:0 18px 8px;font-size:14px;color:var(--muted);overflow-wrap:anywhere}
+.row.lp{outline:2px solid var(--accent);transform:scale(.98)}
 @media (max-width:420px){.counters{gap:6px}.cnt b{font-size:21px}.two{grid-template-columns:1fr}}
 </style>
 </head>
@@ -119,6 +123,7 @@ h1{font-size:22px;font-weight:700;margin:0}
 <button class="fab" id="fab" aria-label="Жаңа іс">+</button>
 <div class="dimmer" id="dimmer" hidden></div>
 <nav class="drawer" id="drawer" aria-label="Бөлімдер"></nav>
+<div class="mvsheet" id="mvsheet" hidden></div>
 <div class="sheet" id="sheet" hidden></div>
 <div class="toast" id="toast" hidden></div>
 
@@ -234,7 +239,7 @@ document.addEventListener("click",e=>{
   if(ordering)return;
   const k=e.target.closest("[data-k]");if(k){view.counter=(view.counter===k.dataset.k&&k.dataset.k!=="all")?"all":k.dataset.k;render();return}
   const s=e.target.closest("[data-s]");if(s){view.section=s.dataset.s;render();return}
-  const r=e.target.closest(".row");if(r){openCase(r.dataset.id);return}
+  const r=e.target.closest(".row");if(r){if(lpFired){lpFired=false;return}openCase(r.dataset.id);return}
 });
 $("q").addEventListener("input",e=>{view.q=e.target.value;render()});
 $("fab").addEventListener("click",()=>openCase(null));
@@ -249,6 +254,23 @@ function openMenu(){
 }
 function closeMenu(){$("drawer").classList.remove("open");$("dimmer").hidden=true}
 $("btnMenu").addEventListener("click",openMenu);
+/* long press on a case -> move to another section */
+let lpTimer=null,lpFired=false,lpStart=null,lpRow=null;
+function lpCancel(){clearTimeout(lpTimer);lpTimer=null;if(lpRow)lpRow.classList.remove("lp");lpRow=null}
+$("list").addEventListener("pointerdown",e=>{const r=e.target.closest(".row");if(!r||ordering||!r.dataset.id)return;lpFired=false;lpStart=[e.clientX,e.clientY];lpRow=r;
+  lpTimer=setTimeout(()=>{lpFired=true;r.classList.remove("lp");try{navigator.vibrate&&navigator.vibrate(30)}catch(_){}openMove(r.dataset.id)},550);setTimeout(()=>{if(lpTimer&&lpRow)lpRow.classList.add("lp")},200)});
+$("list").addEventListener("pointermove",e=>{if(lpTimer&&lpStart&&Math.hypot(e.clientX-lpStart[0],e.clientY-lpStart[1])>10)lpCancel()});
+["pointerup","pointercancel","pointerleave"].forEach(t=>$("list").addEventListener(t,lpCancel));
+$("list").addEventListener("contextmenu",e=>{if(e.target.closest(".row"))e.preventDefault()});
+function openMove(id){
+  const c=all.find(x=>x.id===id);if(!c)return;
+  $("mvsheet").innerHTML=`<h3>Бөлімге жылжыту</h3><p>${esc(c.title)}</p>`+layout.chips.filter(k=>k!=="all"&&k!=="closed").map(k=>`<button class="ditem ${c.section===k?"cur":""}" data-mvto="${k}"><span>${esc(secName(k))}</span>${c.section===k?"<small>қазір</small>":""}</button>`).join("")+`<div class="dsep"></div><button class="ditem" data-mvto="">Болдырмау</button>`;
+  $("mvsheet").dataset.id=id;$("mvsheet").hidden=false;$("dimmer").hidden=false;
+}
+function closeMove(){$("mvsheet").hidden=true;$("dimmer").hidden=true}
+$("mvsheet").addEventListener("click",e=>{const b=e.target.closest("[data-mvto]");if(!b)return;const to=b.dataset.mvto,id=$("mvsheet").dataset.id;closeMove();
+  if(!to)return;const c=all.find(x=>x.id===id);if(!c||c.section===to)return;c.section=to;c.updated=nowISO();saveLocal();render();toast("«"+secName(to)+"» бөліміне жылжытылды")});
+$("dimmer").addEventListener("click",closeMove);
 $("dimmer").addEventListener("click",closeMenu);
 $("drawer").addEventListener("click",e=>{const b=e.target.closest("[data-ds]");if(!b)return;const id=b.dataset.ds;
   if(id==="closed"){view.counter="closed";view.section="all"}else{view.section=id;if(view.counter==="closed")view.counter="all"}
