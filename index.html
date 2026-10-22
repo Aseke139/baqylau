@@ -48,6 +48,8 @@ h1{font-size:19px;font-weight:700;margin:0}
 .chip[aria-pressed="true"]{background:#0b3a78;border-color:#0b3a78;color:#fff;font-weight:700;box-shadow:0 2px 6px rgba(11,58,120,.35)}
 .chip[aria-pressed="true"] small{color:var(--surface);opacity:.8}
 .search{margin-top:10px;width:100%;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px;padding:10px 12px;font:inherit}
+.wk-h{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:10px 2px 0}
+.wk-h.red{color:var(--red)}.wk-h.amber{color:var(--amber)}
 .list{margin-top:8px;display:flex;flex-direction:column;gap:4px}
 .row{display:grid;grid-template-columns:4px 1fr auto;gap:0 8px;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:6px 8px 6px 0;cursor:pointer;text-align:left;font:inherit;color:inherit;width:100%;overflow:hidden}
 .row .bar{background:var(--line)}
@@ -124,7 +126,7 @@ h1{font-size:19px;font-weight:700;margin:0}
 </head>
 <body>
 <div class="wrap">
-  <header><div class="hl"><button class="burger" id="btnMenu" aria-label="Бөлімдер">☰</button><h1>Бақылау</h1></div><div class="hbtns"><button class="hbtn" id="btnOrder">Реттеу</button><button class="hbtn" id="btnSettings">Баптау</button></div></header>
+  <header><div class="hl"><button class="burger" id="btnMenu" aria-label="Бөлімдер">☰</button><h1>Бақылау</h1></div><div class="hbtns"><button class="hbtn" id="btnWeek">Апта</button><button class="hbtn" id="btnOrder">Реттеу</button><button class="hbtn" id="btnSettings" aria-label="Баптау">⚙</button></div></header>
   <div class="ordhint" id="ordHint" hidden>Реттеу режимі: көрсеткілермен блоктарды, бөлімдерді және істерді жылжытыңыз. Біткенде «Дайын» басыңыз.</div>
   <div class="sync"><span class="dot" id="syncDot"></span><span id="syncText">—</span></div>
   <div class="counters" id="counters"></div>
@@ -132,6 +134,7 @@ h1{font-size:19px;font-weight:700;margin:0}
   <div class="chips sub" id="subchips" hidden></div>
   <input class="search" id="q" type="search" placeholder="Іздеу: аты, сот, нөмір…" autocomplete="off">
   <div class="list" id="list"></div>
+  <div class="list" id="week" hidden></div>
 </div>
 <button class="fab" id="fab" aria-label="Жаңа іс">+</button>
 <div class="dimmer" id="dimmer" hidden></div>
@@ -220,8 +223,18 @@ function ensureOrder(){const L=live();if(L.every(c=>typeof c.order==="number"))r
 function moveCase(id,d){const F=filtered();const i=F.findIndex(c=>c.id===id),j=i+d;if(i<0||j<0||j>=F.length)return;const a=F[i],b=F[j],t=nowISO();[a.order,b.order]=[b.order,a.order];if(a.order===b.order)a.order+=d;a.updated=t;b.updated=t;saveLocal();render()}
 
 /* ---------- render ---------- */
+let weekMode=false;
+const KDAYS=["Жексенбі","Дүйсенбі","Сейсенбі","Сәрсенбі","Бейсенбі","Жұма","Сенбі"];
+function renderWeek(){
+  const L=live().filter(c=>!isClosed(c)&&parseDue(c.due));const g={};
+  L.forEach(c=>{const d=parseDue(c.due),n=dayDiff(d);if(n>7)return;const k=n<0?"over":String(n);(g[k]=g[k]||[]).push(c)});
+  const keys=["over",...Array.from({length:8},(_,i)=>String(i))].filter(k=>g[k]);
+  const head=k=>{if(k==="over")return["Мерзімі өтті","red"];const n=+k,d=new Date(todayStart().getTime()+n*86400000),p=x=>String(x).padStart(2,"0"),dt=p(d.getDate())+"."+p(d.getMonth()+1)+" · "+KDAYS[d.getDay()];return[n===0?"Бүгін · "+dt:n===1?"Ертең · "+dt:dt,n===0?"amber":""]};
+  $("week").innerHTML=keys.length?keys.map(k=>{const[h,cl]=head(k);return`<div class="wk-h ${cl}">${h}</div>`+g[k].sort((a,b)=>parseDue(a.due)-parseDue(b.due)).map(c=>{const d=parseDue(c.due),u=urgency(c),p=x=>String(x).padStart(2,"0");return`<button class="row ${u}" data-wk="${esc(c.id)}"><span class="bar"></span><span class="main"><span class="t">${esc(c.title)}</span><span class="meta"><span>${esc(SHORT[c.section]||secName(c.section))}</span>${c.status&&c.status!=="Жұмыста"?`<span>· ${esc(c.status)}</span>`:""}</span></span><span class="side"><span class="due">${k==="over"?fmtDue(d):p(d.getHours())+":"+p(d.getMinutes())}</span>${k==="over"?`<span class="rel">${relText(dayDiff(d))}</span>`:""}</span></button>`}).join("")}).join(""):`<div class="empty">Алдағы 7 күнде мерзім жоқ.</div>`;
+}
 function render(){
   const L=live();
+  $("btnWeek").classList.toggle("on",weekMode);["counters","chips","q","list"].forEach(id=>$(id).hidden=weekMode);$("week").hidden=!weekMode;if(weekMode){$("subchips").hidden=true;renderWeek();return}
   $("btnOrder").textContent=ordering?"Дайын":"Реттеу";$("btnOrder").classList.toggle("on",ordering);$("ordHint").hidden=!ordering;
   $("counters").innerHTML=layout.counters.map(k=>{const x=CNT[k];const inner=`<b>${L.filter(c=>counterMatch(c,k)).length}</b><span>${x.n}</span>`;
     return ordering?`<div class="cnt ${x.cls}">${inner}<div class="mv"><button data-mc="${k}" data-d="-1" aria-label="Солға">←</button><button data-mc="${k}" data-d="1" aria-label="Оңға">→</button></div></div>`
@@ -346,7 +359,9 @@ $("dimmer").addEventListener("click",()=>{if(Date.now()-holdAt<600)return;closeM
 $("drawer").addEventListener("click",e=>{const b=e.target.closest("[data-ds]");if(!b)return;const id=b.dataset.ds;
   if(id==="closed"){view.counter="closed";view.section="all"}else{view.section=id;if(view.counter==="closed")view.counter="all"}
   closeMenu();render();window.scrollTo(0,0)});
-$("btnOrder").addEventListener("click",()=>{ordering=!ordering;if(ordering)ensureOrder();render()});
+$("btnWeek").addEventListener("click",()=>{weekMode=!weekMode;if(weekMode)ordering=false;render();window.scrollTo(0,0)});
+$("week").addEventListener("click",e=>{const r=e.target.closest("[data-wk]");if(r){e.stopPropagation();openCase(r.dataset.wk)}});
+$("btnOrder").addEventListener("click",()=>{weekMode=false;ordering=!ordering;if(ordering)ensureOrder();render()});
 
 /* ---------- case sheet ---------- */
 let draft=null,editingId=null;
@@ -382,6 +397,7 @@ function renderCase(){
   <div class="acts">
     ${editingId?(d.status==="Жабылды"?`<button class="btn" id="s_reopen">Қайта ашу</button>`:`<button class="btn ok" id="s_close">Істі жабу</button>`):""}
     ${editingId?`<button class="btn" id="s_move">Бөлімге жылжыту</button>`:""}
+    <button class="btn" id="s_cal">📅 Күнтізбеге</button>
     ${editingId?`<button class="btn danger" id="s_del">Өшіру</button>`:""}
   </div><div id="confirmbox"></div></div>`;
   const pull=()=>{d.title=$("f_title").value;d.section=$("f_section").value;d.status=$("f_status").value;d.due=$("f_due").value;d.priority=+$("f_pri").value;d.phone=$("f_phone").value;d.desc=$("f_desc").value};
@@ -391,6 +407,10 @@ function renderCase(){
   $("f_newstep").onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();$("s_addstep").click()}};
   $("steps").onchange=e=>{const i=e.target.dataset.i;if(i==null)return;pull();d.steps[i].done=e.target.checked;renderCase()};
   $("steps").onclick=e=>{const i=e.target.dataset.del;if(i==null)return;pull();d.steps.splice(+i,1);renderCase()};
+  $("s_cal").onclick=()=>{pull();const dt=parseDue(d.due);if(!dt){toast("Алдымен мерзімді қойыңыз");$("f_due").focus();return}
+    const p=x=>String(x).padStart(2,"0"),f=x=>x.getFullYear()+p(x.getMonth()+1)+p(x.getDate())+"T"+p(x.getHours())+p(x.getMinutes())+"00",e2=new Date(dt.getTime()+3600000);
+    const u="https://calendar.google.com/calendar/render?action=TEMPLATE&text="+encodeURIComponent(d.title||"Іс")+"&dates="+f(dt)+"/"+f(e2)+"&ctz=Asia/Almaty&details="+encodeURIComponent("Бақылау · "+secName(d.section));
+    window.open(u,"_blank")};
   if($("s_move"))$("s_move").onclick=()=>{const id=editingId;$("sheet").hidden=true;document.body.style.overflow="";draft=null;editingId=null;openMove(id)};
   if($("s_close"))$("s_close").onclick=()=>{pull();d.status="Жабылды";saveCase()};
   if($("s_reopen"))$("s_reopen").onclick=()=>{pull();d.status="Жұмыста";saveCase()};
