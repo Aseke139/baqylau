@@ -71,6 +71,8 @@ h1{font-size:19px;font-weight:700;margin:0}
 .bbar button.on{background:var(--accent-soft);color:var(--accent);font-weight:700}
 .bbar .plus b{background:var(--accent);color:#fff;border-radius:999px;width:34px;height:26px;display:flex;align-items:center;justify-content:center;font-size:22px}
 .nstep{display:flex;align-items:flex-start;gap:6px;margin-top:4px;padding:3px 6px;border-radius:6px;background:var(--accent-soft);font-size:12px;line-height:1.25;color:var(--ink)}
+body.locked .nstep{opacity:.75}body.locked .nstep .ck{border-color:var(--muted);background:var(--line)}
+.lockbar{font-size:12px;font-weight:700;color:var(--accent);background:var(--accent-soft);border-radius:8px;padding:4px 8px}
 .nstep .ck{flex:0 0 auto;width:15px;height:15px;border:1.5px solid var(--accent);border-radius:3px;background:var(--surface);margin-top:1px}
 .oldfab{position:fixed;right:calc(18px + env(safe-area-inset-right,0px));bottom:calc(18px + env(safe-area-inset-bottom,0px));width:56px;height:56px;border-radius:50%;border:0;background:var(--accent);color:var(--surface);font-size:30px;line-height:1;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.25)}
 .sheet{position:fixed;inset:0;background:var(--bg);overflow-y:auto;z-index:20}
@@ -134,7 +136,7 @@ h1{font-size:19px;font-weight:700;margin:0}
 </head>
 <body>
 <div class="wrap">
-  <header><div class="hl"><h1>Бақылау</h1></div><div class="hbtns"><button class="hbtn" id="btnOrder">Реттеу</button><button class="hbtn" id="btnSettings" aria-label="Баптау">⚙</button></div></header>
+  <header><div class="hl"><h1>Бақылау</h1></div><div class="hbtns"><button class="hbtn" id="btnLock" aria-label="Құлып">🔓</button><button class="hbtn" id="btnOrder">Реттеу</button><button class="hbtn" id="btnSettings" aria-label="Баптау">⚙</button></div></header>
   <div class="ordhint" id="ordHint" hidden>Реттеу режимі: көрсеткілермен блоктарды, бөлімдерді және істерді жылжытыңыз. Біткенде «Дайын» басыңыз.</div>
   <div class="sync"><span class="dot" id="syncDot"></span><span id="syncText">—</span></div>
   <div class="counters" id="counters"></div>
@@ -231,7 +233,9 @@ function ensureOrder(){const L=live();if(L.every(c=>typeof c.order==="number"))r
 function moveCase(id,d){const F=filtered();const i=F.findIndex(c=>c.id===id),j=i+d;if(i<0||j<0||j>=F.length)return;const a=F[i],b=F[j],t=nowISO();[a.order,b.order]=[b.order,a.order];if(a.order===b.order)a.order+=d;a.updated=t;b.updated=t;saveLocal();render()}
 
 /* ---------- render ---------- */
-let weekMode=false;
+let weekMode=false,locked=!!load("baqylau.lock",false);
+function setLock(v){locked=v;store("baqylau.lock",v);render();toast(v?"🔒 Тек қарау: белгілеу өшірілді":"🔓 Құлып ашылды")}
+
 const KDAYS=["Жексенбі","Дүйсенбі","Сейсенбі","Сәрсенбі","Бейсенбі","Жұма","Сенбі"];
 function renderWeek(){
   const L=live().filter(c=>!isClosed(c)&&parseDue(c.due));const g={};
@@ -242,6 +246,7 @@ function renderWeek(){
 }
 function render(){
   const L=live();
+  $("btnLock").textContent=locked?"🔒":"🔓";$("btnLock").classList.toggle("on",locked);document.body.classList.toggle("locked",locked);
   $("btnWeek").classList.toggle("on",weekMode);["counters","chips","q","list"].forEach(id=>$(id).hidden=weekMode);$("week").hidden=!weekMode;if(weekMode){$("subchips").hidden=true;renderWeek();return}
   $("btnOrder").textContent=ordering?"Дайын":"Реттеу";$("btnOrder").classList.toggle("on",ordering);$("ordHint").hidden=!ordering;
   $("counters").innerHTML=layout.counters.map(k=>{const x=CNT[k];const inner=`<b>${L.filter(c=>counterMatch(c,k)).length}</b><span>${x.n}</span>`;
@@ -283,11 +288,11 @@ document.addEventListener("click",e=>{
   if(ordering)return;
   const k=e.target.closest("[data-k]");if(k){view.counter=(view.counter===k.dataset.k&&k.dataset.k!=="all")?"all":k.dataset.k;render();return}
   const s=e.target.closest("[data-s]");if(s){view.section=s.dataset.s;render();return}
-  const ns=e.target.closest("[data-ns]");if(ns){if(lpFired){lpFired=false;return}const c=all.find(x=>x.id===ns.dataset.ns),i=+ns.dataset.si;if(c&&c.steps&&c.steps[i]){c.steps[i].done=true;c.updated=nowISO();saveLocal();render();toast("✓ "+c.steps[i].t.slice(0,40))}return}
+  const ns=e.target.closest("[data-ns]");if(ns&&locked){toast("🔒 Құлып қосулы");return}if(ns){if(lpFired){lpFired=false;return}const c=all.find(x=>x.id===ns.dataset.ns),i=+ns.dataset.si;if(c&&c.steps&&c.steps[i]){c.steps[i].done=true;c.updated=nowISO();saveLocal();render();toast("✓ "+c.steps[i].t.slice(0,40))}return}
   const r=e.target.closest(".row");if(r){if(lpFired){lpFired=false;return}openCase(r.dataset.id);return}
 });
 $("q").addEventListener("input",e=>{view.q=e.target.value;render()});
-$("fab").addEventListener("click",()=>openCase(null));
+$("fab").addEventListener("click",()=>{if(locked){toast("🔒 Құлып қосулы");return}openCase(null)});
 $("btnSettings").addEventListener("click",openSettings);
 function openMenu(){
   const L=live(),open=L.filter(c=>!isClosed(c));
@@ -307,6 +312,7 @@ function makeDrag(box,itemSel,o){
   const items=()=>[...box.querySelectorAll(itemSel)];
   const pt=e=>e.touches?e.touches[0]:e;
   function start(e){
+    if(locked)return;
     const it=e.target.closest(itemSel);if(!it||!box.contains(it))return;
     const onHandle=o.handleSel&&e.target.closest(o.handleSel);
     if(o.handleSel&&o.handleOnly&&!onHandle)return;
@@ -369,10 +375,11 @@ $("dimmer").addEventListener("click",()=>{if(Date.now()-holdAt<600)return;closeM
 $("drawer").addEventListener("click",e=>{if(e.target.closest("#d_exit")){exitApp();return}const b=e.target.closest("[data-ds]");if(!b)return;const id=b.dataset.ds;
   if(id==="closed"){view.counter="closed";view.section="all"}else{view.section=id;if(view.counter==="closed")view.counter="all"}
   closeMenu();render();window.scrollTo(0,0)});
+$("btnLock").addEventListener("click",()=>setLock(!locked));
 $("btnFind").addEventListener("click",()=>{weekMode=false;ordering=false;render();window.scrollTo(0,0);setTimeout(()=>$("q").focus(),50)});
 $("btnWeek").addEventListener("click",()=>{weekMode=!weekMode;if(weekMode)ordering=false;render();window.scrollTo(0,0)});
 $("week").addEventListener("click",e=>{const r=e.target.closest("[data-wk]");if(r){e.stopPropagation();openCase(r.dataset.wk)}});
-$("btnOrder").addEventListener("click",()=>{weekMode=false;ordering=!ordering;if(ordering)ensureOrder();render()});
+$("btnOrder").addEventListener("click",()=>{if(locked){toast("🔒 Құлып қосулы");return}weekMode=false;ordering=!ordering;if(ordering)ensureOrder();render()});
 
 /* ---------- case sheet ---------- */
 let draft=null,editingId=null;
@@ -422,6 +429,7 @@ function renderCase(){
     const p=x=>String(x).padStart(2,"0"),f=x=>x.getFullYear()+p(x.getMonth()+1)+p(x.getDate())+"T"+p(x.getHours())+p(x.getMinutes())+"00",e2=new Date(dt.getTime()+3600000);
     const u="https://calendar.google.com/calendar/render?action=TEMPLATE&text="+encodeURIComponent(d.title||"Іс")+"&dates="+f(dt)+"/"+f(e2)+"&ctz=Asia/Almaty&details="+encodeURIComponent("Бақылау · "+secName(d.section));
     window.open(u,"_blank")};
+  if(locked&&editingId){const sh=$("sheet");sh.querySelectorAll("input,textarea").forEach(x=>{if(x.type==="checkbox")x.disabled=true;else x.readOnly=true});sh.querySelectorAll("select").forEach(x=>x.disabled=true);["s_save","s_close","s_reopen","s_move","s_del"].forEach(id=>{const b=$(id);if(b)b.hidden=true});sh.querySelectorAll(".x,.addstep").forEach(x=>x.hidden=true);$("s_save").insertAdjacentHTML("afterend",`<span class="lockbar">🔒 Тек қарау</span>`)}
   if($("s_move"))$("s_move").onclick=()=>{const id=editingId;$("sheet").hidden=true;document.body.style.overflow="";draft=null;editingId=null;openMove(id)};
   if($("s_close"))$("s_close").onclick=()=>{pull();d.status="Жабылды";saveCase()};
   if($("s_reopen"))$("s_reopen").onclick=()=>{pull();d.status="Жұмыста";saveCase()};
