@@ -34,6 +34,8 @@ h1{font-size:22px;font-weight:700;margin:0}
 .cnt span{font-size:13px;color:var(--muted)}
 .cnt.red b{color:var(--red)} .cnt.amber b{color:var(--amber)}
 .cnt[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.chips.sub{grid-template-columns:repeat(2,minmax(0,1fr));margin-top:6px;padding:6px;background:var(--accent-soft);border-radius:12px}
+.chips[hidden]{display:none}
 .chips{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:12px}
 .chips .chip{display:flex;align-items:center;justify-content:center;gap:3px;min-width:0;white-space:nowrap;border-radius:10px;padding:8px 2px;font-size:13px;letter-spacing:-.01em}
 .chips .chip small{font-size:12px;margin-left:0}
@@ -127,6 +129,7 @@ h1{font-size:22px;font-weight:700;margin:0}
   <div class="sync"><span class="dot" id="syncDot"></span><span id="syncText">—</span></div>
   <div class="counters" id="counters"></div>
   <div class="chips" id="chips"></div>
+  <div class="chips sub" id="subchips" hidden></div>
   <input class="search" id="q" type="search" placeholder="Іздеу: аты, сот, нөмір…" autocomplete="off">
   <div class="list" id="list"></div>
 </div>
@@ -175,11 +178,14 @@ let view={counter:"all",section:"all",q:""};
 let zoom=load("baqylau.zoom",115);function applyZoom(){document.body.style.zoom=zoom+"%"}applyZoom();
 let ordering=false;
 const CNT={over:{n:"Мерзімі өтті",cls:"red"},today:{n:"Бүгін",cls:"amber"},week:{n:"7 күн ішінде",cls:""},all:{n:"Ашық істер",cls:""}};
+const SUBS=["qalpyna","onai","talap","otbasy"];
+const inSec=(c,id)=>id==="sot"?(c.section==="sot"||SUBS.includes(c.section)):id==="sot0"?c.section==="sot":c.section===id;
+const inSot=id=>id==="sot"||id==="sot0"||SUBS.includes(id);
 let layout=load("baqylau.layout",{});
 function fixLayout(){
-  const ck=Object.keys(CNT),sk=["all",...SECTIONS.map(x=>x.id),"closed"];
+  const ck=Object.keys(CNT),sk=["all",...SECTIONS.map(x=>x.id).filter(x=>!SUBS.includes(x)),"closed"];
   layout.counters=(layout.counters||[]).filter(k=>ck.includes(k));ck.forEach(k=>{if(!layout.counters.includes(k))layout.counters.push(k)});
-  layout.chips=(layout.chips||[]).filter(k=>sk.includes(k));sk.forEach(k=>{if(!layout.chips.includes(k)){const after=["qalpyna","onai","talap","otbasy"].includes(k)?layout.chips.indexOf("sot"):-1;if(after>=0){let i=after+1;while(i<layout.chips.length&&["qalpyna","onai","talap","otbasy"].includes(layout.chips[i]))i++;layout.chips.splice(i,0,k)}else layout.chips.push(k)}});
+  layout.chips=(layout.chips||[]).filter(k=>sk.includes(k));sk.forEach(k=>{if(!layout.chips.includes(k))layout.chips.push(k)});
 }
 fixLayout();
 function moveIn(arr,k,d){const i=arr.indexOf(k),j=i+d;if(i<0||j<0||j>=arr.length)return;[arr[i],arr[j]]=[arr[j],arr[i]];store("baqylau.layout",layout);render()}
@@ -205,7 +211,7 @@ function counterMatch(c,k){
 }
 function filtered(){
   const q=view.q.trim().toLowerCase();
-  return live().filter(c=>counterMatch(c,view.counter)&&(view.section==="all"||c.section===view.section)&&(!q||[c.title,c.phone,c.desc,secName(c.section)].join(" ").toLowerCase().includes(q)))
+  return live().filter(c=>counterMatch(c,view.counter)&&(view.section==="all"||inSec(c,view.section))&&(!q||[c.title,c.phone,c.desc,secName(c.section)].join(" ").toLowerCase().includes(q)))
    .sort(cmp);
 }
 function baseCmp(a,b){const p=(b.priority||0)-(a.priority||0);if(p)return p;const da=parseDue(a.due),db=parseDue(b.due);if(da&&db)return da-db;if(da)return -1;if(db)return 1;return String(a.title).localeCompare(String(b.title))}
@@ -223,11 +229,13 @@ function render(){
   const base=L.filter(c=>counterMatch(c,view.counter));
   $("chips").innerHTML=layout.chips.map(id=>{
     const name=SHORT[id]||secName(id);
-    const n=id==="all"?base.length:id==="closed"?L.filter(isClosed).length:base.filter(c=>c.section===id).length;
+    const n=id==="all"?base.length:id==="closed"?L.filter(isClosed).length:base.filter(c=>inSec(c,id)).length;
     if(ordering)return`<span class="chip ord"><button class="mvb" data-mh="${id}" data-d="-1" aria-label="Солға">‹</button><span class="nm">${esc(name)}</span><button class="mvb" data-mh="${id}" data-d="1" aria-label="Оңға">›</button></span>`;
     if(id==="closed")return`<button class="chip" data-k="closed" aria-pressed="${view.counter==="closed"}"><span class="nm">${name}</span><small>${n}</small></button>`;
-    return`<button class="chip" data-s="${id}" aria-pressed="${view.section===id&&view.counter!=="closed"}"><span class="nm">${esc(name)}</span><small>${n}</small></button>`}).join("");
+    return`<button class="chip" data-s="${id}" aria-pressed="${(id==="sot"?inSot(view.section):view.section===id)&&view.counter!=="closed"}"><span class="nm">${esc(name)}</span><small>${n}</small></button>`}).join("");
   $("chips").classList.toggle("ordg",ordering);
+  const showSub=!ordering&&inSot(view.section)&&view.counter!=="closed";$("subchips").hidden=!showSub;
+  if(showSub)$("subchips").innerHTML=[["sot","Барлығы"],...SUBS.map(k=>[k,SHORT[k]]),["sot0","Басқа"]].map(([k,nm])=>`<button class="chip" data-s="${k}" aria-pressed="${view.section===k}"><span class="nm">${esc(nm)}</span><small>${base.filter(c=>inSec(c,k)).length}</small></button>`).join("");
   const F=filtered();
   if(!F.length){$("list").innerHTML=`<div class="empty">${L.length?"Бұл сүзгі бойынша іс жоқ.":"Әзірге іс жоқ. «Баптау» арқылы GitHub-ты қосыңыз немесе + батырмасымен іс қосыңыз."}</div>`;return}
   $("list").innerHTML=F.map((c,i)=>{const u=urgency(c),d=parseDue(c.due),st=c.steps||[],dn=st.filter(s=>s.done).length,p=c.priority||0;
@@ -263,7 +271,7 @@ function openMenu(){
   const L=live(),open=L.filter(c=>!isClosed(c));
   const item=(attr,name,n,cur)=>`<button class="ditem ${cur?"cur":""}" ${attr}><span>${esc(name)}</span><small class="${n?"":"z"}">${n}</small></button>`;
   let h=`<h2>Бөлімдер</h2>`+item('data-ds="all"',"Барлығы",open.length,view.section==="all"&&view.counter!=="closed");
-  h+=layout.chips.filter(id=>id!=="all"&&id!=="closed").map(id=>item(`data-ds="${id}"`,secName(id),open.filter(c=>c.section===id).length,view.section===id&&view.counter!=="closed")).join("");
+  h+=layout.chips.filter(id=>id!=="all"&&id!=="closed").map(id=>item(`data-ds="${id}"`,secName(id),open.filter(c=>inSec(c,id)).length,view.section===id&&view.counter!=="closed")+(id==="sot"?[...SUBS,"sot0"].map(k=>item(`data-ds="${k}" style="padding-left:34px"`,k==="sot0"?"Басқа":secName(k),open.filter(c=>inSec(c,k)).length,view.section===k&&view.counter!=="closed")).join(""):"")).join("");
   h+=`<div class="dsep"></div>`+item('data-ds="closed"',"Жабылған",L.filter(isClosed).length,view.counter==="closed");
   $("drawer").innerHTML=h;$("dimmer").hidden=false;requestAnimationFrame(()=>$("drawer").classList.add("open"));
 }
@@ -327,7 +335,7 @@ document.addEventListener("selectstart",e=>{if(e.target.closest&&e.target.closes
 $("list").addEventListener("contextmenu",e=>{if(e.target.closest(".row"))e.preventDefault()});
 function openMove(id){
   const c=all.find(x=>x.id===id);if(!c)return;
-  $("mvsheet").innerHTML=`<h3>Бөлімге жылжыту</h3><p>${esc(c.title)}</p>`+layout.chips.filter(k=>k!=="all"&&k!=="closed").map(k=>`<button class="ditem ${c.section===k?"cur":""}" data-mvto="${k}"><span>${esc(secName(k))}</span>${c.section===k?"<small>қазір</small>":""}</button>`).join("")+`<div class="dsep"></div><button class="ditem" data-mvto="">Болдырмау</button>`;
+  $("mvsheet").innerHTML=`<h3>Бөлімге жылжыту</h3><p>${esc(c.title)}</p>`+layout.chips.filter(k=>k!=="all"&&k!=="closed").flatMap(k=>k==="sot"?[...SUBS,"sot"]:[k]).map(k=>`<button class="ditem ${c.section===k?"cur":""}" data-mvto="${k}" ${SUBS.includes(k)?'style="padding-left:34px"':""}><span>${esc(k==="sot"?"Соттағы істер · басқа":secName(k))}</span>${c.section===k?"<small>қазір</small>":""}</button>`).join("")+`<div class="dsep"></div><button class="ditem" data-mvto="">Болдырмау</button>`;
   $("mvsheet").dataset.id=id;$("mvsheet").hidden=false;$("dimmer").hidden=false;
 }
 function closeMove(){$("mvsheet").hidden=true;$("dimmer").hidden=true}
@@ -347,7 +355,7 @@ function closeSheet(){$("sheet").hidden=true;document.body.style.overflow="";dra
 function newId(){return "c"+Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
 function openCase(id){
   const c=id?all.find(x=>x.id===id):null;editingId=id;
-  draft=c?JSON.parse(JSON.stringify(c)):{title:"",section:view.section!=="all"?view.section:"ister",status:"Жұмыста",priority:0,due:"",phone:"",desc:"",steps:[]};
+  draft=c?JSON.parse(JSON.stringify(c)):{title:"",section:view.section==="all"?"ister":view.section==="sot0"?"sot":view.section,status:"Жұмыста",priority:0,due:"",phone:"",desc:"",steps:[]};
   draft.steps=draft.steps||[];renderCase();openSheet();
   if(!c)setTimeout(()=>$("f_title").focus(),60);
 }
