@@ -362,7 +362,7 @@ function renderCase(){
   </div>
   <div class="f"><label for="f_phone">Телефон</label><div class="phone"><input id="f_phone" value="${esc(d.phone)}" inputmode="tel" placeholder="+7 …"><a class="btn" id="s_call" href="tel:${esc((d.phone||"").replace(/[^\d+]/g,""))}">Қоңырау</a></div></div>
   <div class="f"><span class="lbl">Кезеңдер ${d.steps.length?`· ${d.steps.filter(s=>s.done).length}/${d.steps.length}`:""}</span>
-    <div class="steps" id="steps">${d.steps.map((s,i)=>`<div class="step ${s.done?"done":""}"><button class="sh" type="button" aria-label="Жылжыту">⠿</button><input type="checkbox" id="st_${i}" data-i="${i}" ${s.done?"checked":""}><label class="st" for="st_${i}">${esc(s.t)}</label><button class="x" data-del="${i}" aria-label="Өшіру">×</button></div>`).join("")}</div>
+    <div class="steps" id="steps">${d.steps.map((s,i)=>`<div class="step ${s.done?"done":""}"><input type="checkbox" id="st_${i}" data-i="${i}" ${s.done?"checked":""}><label class="st" for="st_${i}">${esc(s.t)}</label><button class="x" data-del="${i}" aria-label="Өшіру">×</button></div>`).join("")}</div>
     <div class="addstep"><input id="f_newstep" placeholder="Жаңа кезең…"><button class="btn" id="s_addstep" type="button">Қосу</button></div>
   </div>
   <div class="f"><label for="f_desc">Сипаттама</label><textarea id="f_desc" placeholder="Клиент, сот, нөмірлер, не істеу керек…">${esc(d.desc)}</textarea></div>
@@ -377,7 +377,6 @@ function renderCase(){
   $("s_addstep").onclick=()=>{const v=$("f_newstep").value.trim();if(!v)return;pull();d.steps.push({t:v,done:false});renderCase();$("f_newstep").focus()};
   $("f_newstep").onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();$("s_addstep").click()}};
   $("steps").onchange=e=>{const i=e.target.dataset.i;if(i==null)return;pull();d.steps[i].done=e.target.checked;renderCase()};
-  makeDrag($("steps"),".step",{handleSel:".sh",delay:450,scroller:$("sheet"),onDrop:(f,t)=>{pull();const [x]=d.steps.splice(f,1);d.steps.splice(t,0,x);renderCase()},onCancel:()=>renderCase()});
   $("steps").onclick=e=>{const i=e.target.dataset.del;if(i==null)return;pull();d.steps.splice(+i,1);renderCase()};
   if($("s_move"))$("s_move").onclick=()=>{const id=editingId;$("sheet").hidden=true;document.body.style.overflow="";draft=null;editingId=null;openMove(id)};
   if($("s_close"))$("s_close").onclick=()=>{pull();d.status="Жабылды";saveCase()};
