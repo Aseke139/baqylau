@@ -64,7 +64,15 @@ h1{font-size:19px;font-weight:700;margin:0}
 .rel{display:inline-block;margin-top:4px;font-size:13px;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--accent-soft);color:var(--accent)}
 .over .rel{background:var(--red);color:#fff} .soon .rel{background:var(--amber);color:#fff}
 .empty{padding:28px 16px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:10px}
-.fab{position:fixed;right:calc(18px + env(safe-area-inset-right,0px));bottom:calc(18px + env(safe-area-inset-bottom,0px));width:56px;height:56px;border-radius:50%;border:0;background:var(--accent);color:var(--surface);font-size:30px;line-height:1;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.25)}
+.bbar{position:fixed;left:0;right:0;bottom:0;z-index:15;display:grid;grid-template-columns:repeat(4,1fr);background:var(--surface);border-top:1px solid var(--line);padding:4px max(8px,env(safe-area-inset-left,0px)) calc(4px + env(safe-area-inset-bottom,0px));box-shadow:0 -2px 10px rgba(15,39,66,.08)}
+.bbar button{border:0;background:none;color:var(--muted);font:inherit;display:flex;flex-direction:column;align-items:center;gap:0;padding:4px 0;cursor:pointer;border-radius:10px}
+.bbar b{font-size:20px;line-height:1.1;font-weight:600;color:var(--accent);height:26px;display:flex;align-items:center;justify-content:center}
+.bbar small{font-size:11px;line-height:1.2}
+.bbar button.on{background:var(--accent-soft);color:var(--accent);font-weight:700}
+.bbar .plus b{background:var(--accent);color:#fff;border-radius:999px;width:34px;height:26px;display:flex;align-items:center;justify-content:center;font-size:22px}
+.nstep{display:flex;align-items:flex-start;gap:6px;margin-top:4px;padding:3px 6px;border-radius:6px;background:var(--accent-soft);font-size:12px;line-height:1.25;color:var(--ink)}
+.nstep .ck{flex:0 0 auto;width:15px;height:15px;border:1.5px solid var(--accent);border-radius:3px;background:var(--surface);margin-top:1px}
+.oldfab{position:fixed;right:calc(18px + env(safe-area-inset-right,0px));bottom:calc(18px + env(safe-area-inset-bottom,0px));width:56px;height:56px;border-radius:50%;border:0;background:var(--accent);color:var(--surface);font-size:30px;line-height:1;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.25)}
 .sheet{position:fixed;inset:0;background:var(--bg);overflow-y:auto;z-index:20}
 .sheet .wrap{padding-bottom:40px}
 .sbar{display:flex;align-items:center;justify-content:space-between;gap:8px;position:sticky;top:0;background:var(--bg);padding-block:8px;z-index:2}
@@ -90,7 +98,7 @@ h1{font-size:19px;font-weight:700;margin:0}
 .acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
 .confirm{margin-top:10px;padding:12px;border:1px solid var(--red);border-radius:9px;background:var(--red-soft);display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .note{font-size:14px;color:var(--muted);margin-top:8px}
-.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(86px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:8px;font-size:13px;z-index:30}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(70px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:8px;font-size:13px;z-index:30}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .mv{display:flex;gap:4px;justify-content:center;margin-top:6px}
 .mv button,.mvb{border:1px solid var(--line);background:var(--accent-soft);color:var(--accent);border-radius:7px;min-width:34px;height:30px;font:inherit;font-size:16px;font-weight:700;cursor:pointer;padding:0 6px}
@@ -126,7 +134,7 @@ h1{font-size:19px;font-weight:700;margin:0}
 </head>
 <body>
 <div class="wrap">
-  <header><div class="hl"><button class="burger" id="btnMenu" aria-label="Бөлімдер">☰</button><h1>Бақылау</h1></div><div class="hbtns"><button class="hbtn" id="btnWeek">Апта</button><button class="hbtn" id="btnOrder">Реттеу</button><button class="hbtn" id="btnSettings" aria-label="Баптау">⚙</button></div></header>
+  <header><div class="hl"><h1>Бақылау</h1></div><div class="hbtns"><button class="hbtn" id="btnOrder">Реттеу</button><button class="hbtn" id="btnSettings" aria-label="Баптау">⚙</button></div></header>
   <div class="ordhint" id="ordHint" hidden>Реттеу режимі: көрсеткілермен блоктарды, бөлімдерді және істерді жылжытыңыз. Біткенде «Дайын» басыңыз.</div>
   <div class="sync"><span class="dot" id="syncDot"></span><span id="syncText">—</span></div>
   <div class="counters" id="counters"></div>
@@ -136,7 +144,7 @@ h1{font-size:19px;font-weight:700;margin:0}
   <div class="list" id="list"></div>
   <div class="list" id="week" hidden></div>
 </div>
-<button class="fab" id="fab" aria-label="Жаңа іс">+</button>
+<nav class="bbar"><button id="btnMenu" aria-label="Бөлімдер"><b>☰</b><small>Бөлімдер</small></button><button id="btnWeek"><b><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg></b><small>Апта</small></button><button id="btnFind"><b><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/></svg></b><small>Іздеу</small></button><button id="fab" class="plus" aria-label="Жаңа іс"><b>+</b><small>Жаңа іс</small></button></nav>
 <div class="dimmer" id="dimmer" hidden></div>
 <nav class="drawer" id="drawer" aria-label="Бөлімдер"></nav>
 <div class="mvsheet" id="mvsheet" hidden></div>
@@ -253,7 +261,7 @@ function render(){
   if(!F.length){$("list").innerHTML=`<div class="empty">${L.length?"Бұл сүзгі бойынша іс жоқ.":"Әзірге іс жоқ. «Баптау» арқылы GitHub-ты қосыңыз немесе + батырмасымен іс қосыңыз."}</div>`;return}
   $("list").innerHTML=F.map((c,i)=>{const u=urgency(c),d=parseDue(c.due),st=c.steps||[],dn=st.filter(s=>s.done).length,p=c.priority||0;
     if(ordering)return`<div class="row ord ${u}"><span class="bar"></span><span class="main"><span class="t">${esc(c.title)}</span><span class="meta"><span>${esc(secName(c.section))}</span></span></span><span class="side"><button class="mvb" data-mo="${esc(c.id)}" data-d="-1" ${i===0?"disabled":""} aria-label="Жоғары">↑</button><button class="mvb" data-mo="${esc(c.id)}" data-d="1" ${i===F.length-1?"disabled":""} aria-label="Төмен">↓</button></span></div>`;
-    return`<button class="row ${u}" data-id="${esc(c.id)}"><span class="bar"></span><span class="main"><span class="t">${p?`<span class="pri p${p}">${"!".repeat(p)}</span>`:""}${esc(c.title)}</span><span class="meta"><span>${esc(SHORT[c.section]||secName(c.section))}</span>${c.status&&c.status!=="Жұмыста"?`<span>· ${esc(c.status)}</span>`:""}${st.length?`<span>· ${dn}/${st.length} кезең</span>`:""}</span></span><span class="side">${d?`<span class="due">${fmtDue(d)}</span>${isClosed(c)?"":`<span class="rel">${relText(dayDiff(d))}</span>`}`:`<span class="due" style="color:var(--muted)">мерзімсіз</span>`}</span></button>`}).join("");
+    return`<button class="row ${u}" data-id="${esc(c.id)}"><span class="bar"></span><span class="main"><span class="t">${p?`<span class="pri p${p}">${"!".repeat(p)}</span>`:""}${esc(c.title)}</span><span class="meta"><span>${esc(SHORT[c.section]||secName(c.section))}</span>${c.status&&c.status!=="Жұмыста"?`<span>· ${esc(c.status)}</span>`:""}${st.length?`<span>· ${dn}/${st.length} кезең</span>`:""}</span>${(()=>{const i=st.findIndex(x=>!x.done);return i<0||isClosed(c)?"":`<span class="nstep" data-ns="${esc(c.id)}" data-si="${i}" role="checkbox" aria-checked="false"><span class="ck"></span><span>${esc(st[i].t)}</span></span>`})()}</span><span class="side">${d?`<span class="due">${fmtDue(d)}</span>${isClosed(c)?"":`<span class="rel">${relText(dayDiff(d))}</span>`}`:`<span class="due" style="color:var(--muted)">мерзімсіз</span>`}</span></button>`}).join("");
 }
 function renderSync(state,msg){
   const dot=$("syncDot"),t=$("syncText");
@@ -275,6 +283,7 @@ document.addEventListener("click",e=>{
   if(ordering)return;
   const k=e.target.closest("[data-k]");if(k){view.counter=(view.counter===k.dataset.k&&k.dataset.k!=="all")?"all":k.dataset.k;render();return}
   const s=e.target.closest("[data-s]");if(s){view.section=s.dataset.s;render();return}
+  const ns=e.target.closest("[data-ns]");if(ns){if(lpFired){lpFired=false;return}const c=all.find(x=>x.id===ns.dataset.ns),i=+ns.dataset.si;if(c&&c.steps&&c.steps[i]){c.steps[i].done=true;c.updated=nowISO();saveLocal();render();toast("✓ "+c.steps[i].t.slice(0,40))}return}
   const r=e.target.closest(".row");if(r){if(lpFired){lpFired=false;return}openCase(r.dataset.id);return}
 });
 $("q").addEventListener("input",e=>{view.q=e.target.value;render()});
@@ -360,6 +369,7 @@ $("dimmer").addEventListener("click",()=>{if(Date.now()-holdAt<600)return;closeM
 $("drawer").addEventListener("click",e=>{if(e.target.closest("#d_exit")){exitApp();return}const b=e.target.closest("[data-ds]");if(!b)return;const id=b.dataset.ds;
   if(id==="closed"){view.counter="closed";view.section="all"}else{view.section=id;if(view.counter==="closed")view.counter="all"}
   closeMenu();render();window.scrollTo(0,0)});
+$("btnFind").addEventListener("click",()=>{weekMode=false;ordering=false;render();window.scrollTo(0,0);setTimeout(()=>$("q").focus(),50)});
 $("btnWeek").addEventListener("click",()=>{weekMode=!weekMode;if(weekMode)ordering=false;render();window.scrollTo(0,0)});
 $("week").addEventListener("click",e=>{const r=e.target.closest("[data-wk]");if(r){e.stopPropagation();openCase(r.dataset.wk)}});
 $("btnOrder").addEventListener("click",()=>{weekMode=false;ordering=!ordering;if(ordering)ensureOrder();render()});
