@@ -141,6 +141,10 @@ h1{font-size:22px;font-weight:700;margin:0}
 "use strict";
 const SECTIONS=[
   {id:"sot",name:"Соттағы істер"},
+  {id:"qalpyna",name:"Төлем қабілеттілігін қалпына келтіру"},
+  {id:"onai",name:"Оңайлатылған шешімнің күшін жою"},
+  {id:"talap",name:"Менің талап арыздарым"},
+  {id:"otbasy",name:"Отбасылық істер"},
   {id:"suraular",name:"Жіберілген сұраулар"},
   {id:"grafik",name:"График алу"},
   {id:"bankrot",name:"Соттан тыс банкроттық"},
@@ -150,7 +154,7 @@ const SECTIONS=[
   {id:"ister",name:"Істер"},
   {id:"naraz",name:"Наразылық болуы мүмкін"}
 ];
-const SHORT={all:"Барлығы",closed:"Жабылған",sot:"Сот",suraular:"Сұраулар",grafik:"График",bankrot:"Банкрот",jumys:"Жұмыссыз",fu:"Қаржы бас.",shart:"Шарттар",ister:"Істер",naraz:"Наразылық"};
+const SHORT={all:"Барлығы",closed:"Жабылған",sot:"Сот",qalpyna:"Қалпына келтіру",onai:"Оңайлатылған",talap:"Талап арыздар",otbasy:"Отбасы",suraular:"Сұраулар",grafik:"График",bankrot:"Банкрот",jumys:"Жұмыссыз",fu:"Қаржы бас.",shart:"Шарттар",ister:"Істер",naraz:"Наразылық"};
 const STATUSES=["Жұмыста","Жауап күтуде","Шешім шықты","Жабылды"];
 const PRI=[{v:0,n:"Жоқ"},{v:1,n:"Төмен"},{v:2,n:"Орта"},{v:3,n:"Жоғары"}];
 const K={cases:"baqylau.cases",cfg:"baqylau.cfg",dirty:"baqylau.dirty",last:"baqylau.lastSync"};
@@ -175,7 +179,7 @@ let layout=load("baqylau.layout",{});
 function fixLayout(){
   const ck=Object.keys(CNT),sk=["all",...SECTIONS.map(x=>x.id),"closed"];
   layout.counters=(layout.counters||[]).filter(k=>ck.includes(k));ck.forEach(k=>{if(!layout.counters.includes(k))layout.counters.push(k)});
-  layout.chips=(layout.chips||[]).filter(k=>sk.includes(k));sk.forEach(k=>{if(!layout.chips.includes(k))layout.chips.push(k)});
+  layout.chips=(layout.chips||[]).filter(k=>sk.includes(k));sk.forEach(k=>{if(!layout.chips.includes(k)){const after=["qalpyna","onai","talap","otbasy"].includes(k)?layout.chips.indexOf("sot"):-1;if(after>=0){let i=after+1;while(i<layout.chips.length&&["qalpyna","onai","talap","otbasy"].includes(layout.chips[i]))i++;layout.chips.splice(i,0,k)}else layout.chips.push(k)}});
 }
 fixLayout();
 function moveIn(arr,k,d){const i=arr.indexOf(k),j=i+d;if(i<0||j<0||j>=arr.length)return;[arr[i],arr[j]]=[arr[j],arr[i]];store("baqylau.layout",layout);render()}
