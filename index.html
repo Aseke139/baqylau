@@ -106,6 +106,7 @@ h1{font-size:22px;font-weight:700;margin:0}
 .mvsheet{position:fixed;left:0;right:0;bottom:0;background:var(--surface);z-index:27;border-radius:16px 16px 0 0;box-shadow:0 -6px 24px rgba(0,0,0,.18);padding:14px 0 calc(14px + env(safe-area-inset-bottom,0px));max-height:80vh;overflow-y:auto}
 .mvsheet h3{margin:0 18px 4px;font-size:16px}
 .mvsheet p{margin:0 18px 8px;font-size:14px;color:var(--muted);overflow-wrap:anywhere}
+.list .row{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .row.lp{outline:2px solid var(--accent);transform:scale(.98)}
 @media (max-width:420px){.counters{gap:6px}.cnt b{font-size:21px}.two{grid-template-columns:1fr}}
 </style>
@@ -260,7 +261,11 @@ function lpCancel(){clearTimeout(lpTimer);lpTimer=null;if(lpRow)lpRow.classList.
 $("list").addEventListener("pointerdown",e=>{const r=e.target.closest(".row");if(!r||ordering||!r.dataset.id)return;lpFired=false;lpStart=[e.clientX,e.clientY];lpRow=r;
   lpTimer=setTimeout(()=>{lpFired=true;r.classList.remove("lp");try{navigator.vibrate&&navigator.vibrate(30)}catch(_){}openMove(r.dataset.id)},550);setTimeout(()=>{if(lpTimer&&lpRow)lpRow.classList.add("lp")},200)});
 $("list").addEventListener("pointermove",e=>{if(lpTimer&&lpStart&&Math.hypot(e.clientX-lpStart[0],e.clientY-lpStart[1])>10)lpCancel()});
-["pointerup","pointercancel","pointerleave"].forEach(t=>$("list").addEventListener(t,lpCancel));
+["pointerup","pointerleave"].forEach(t=>$("list").addEventListener(t,lpCancel));
+$("list").addEventListener("pointercancel",()=>{ if(lpTimer&&lpRow){ /* browser took over (scroll) — keep timer only if finger still */ } });
+$("list").addEventListener("touchmove",e=>{const t=e.touches[0];if(lpTimer&&lpStart&&t&&Math.hypot(t.clientX-lpStart[0],t.clientY-lpStart[1])>10)lpCancel()},{passive:true});
+$("list").addEventListener("touchend",()=>{if(lpTimer)lpCancel()});
+document.addEventListener("selectstart",e=>{if(e.target.closest&&e.target.closest(".list"))e.preventDefault()});
 $("list").addEventListener("contextmenu",e=>{if(e.target.closest(".row"))e.preventDefault()});
 function openMove(id){
   const c=all.find(x=>x.id===id);if(!c)return;
@@ -310,6 +315,7 @@ function renderCase(){
   <div class="f"><label for="f_desc">Сипаттама</label><textarea id="f_desc" placeholder="Клиент, сот, нөмірлер, не істеу керек…">${esc(d.desc)}</textarea></div>
   <div class="acts">
     ${editingId?(d.status==="Жабылды"?`<button class="btn" id="s_reopen">Қайта ашу</button>`:`<button class="btn ok" id="s_close">Істі жабу</button>`):""}
+    ${editingId?`<button class="btn" id="s_move">Бөлімге жылжыту</button>`:""}
     ${editingId?`<button class="btn danger" id="s_del">Өшіру</button>`:""}
   </div><div id="confirmbox"></div></div>`;
   const pull=()=>{d.title=$("f_title").value;d.section=$("f_section").value;d.status=$("f_status").value;d.due=$("f_due").value;d.priority=+$("f_pri").value;d.phone=$("f_phone").value;d.desc=$("f_desc").value};
@@ -319,6 +325,7 @@ function renderCase(){
   $("f_newstep").onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();$("s_addstep").click()}};
   $("steps").onchange=e=>{const i=e.target.dataset.i;if(i==null)return;pull();d.steps[i].done=e.target.checked;renderCase()};
   $("steps").onclick=e=>{const i=e.target.dataset.del;if(i==null)return;pull();d.steps.splice(+i,1);renderCase()};
+  if($("s_move"))$("s_move").onclick=()=>{const id=editingId;$("sheet").hidden=true;document.body.style.overflow="";draft=null;editingId=null;openMove(id)};
   if($("s_close"))$("s_close").onclick=()=>{pull();d.status="Жабылды";saveCase()};
   if($("s_reopen"))$("s_reopen").onclick=()=>{pull();d.status="Жұмыста";saveCase()};
   if($("s_del"))$("s_del").onclick=()=>{$("confirmbox").innerHTML=`<div class="confirm"><span>Бұл істі өшіру керек пе?</span><button class="btn danger" id="s_delyes">Иә, өшіру</button><button class="btn" id="s_delno">Жоқ</button></div>`;$("s_delno").onclick=()=>$("confirmbox").innerHTML="";$("s_delyes").onclick=delCase};
