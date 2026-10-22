@@ -501,7 +501,7 @@ setInterval(()=>{if(document.visibilityState==="visible")syncNow()},120000);
 setInterval(render,60000);
 
 /* ---------- Android back button ---------- */
-let lastBack=0;
+let lastBack=0,exiting=false;
 function backStep(){
   if(!$("mvsheet").hidden){closeMove();return true}
   if(!$("sheet").hidden){const b=$("s_back")||$("g_back");if(b)b.click();else closeSheet();return true}
@@ -513,12 +513,13 @@ function backStep(){
 }
 try{history.replaceState({root:1},"");history.pushState({g:1},"")}catch(e){}
 window.addEventListener("popstate",()=>{
+  if(exiting){exiting=false;toast("Енді «артқа» басыңыз — қосымша жабылады");return}
   if(backStep()){history.pushState({g:1},"");return}
   const now=Date.now();
   if(now-lastBack<2000){history.back();return}
   lastBack=now;toast("Шығу үшін тағы бір рет басыңыз");history.pushState({g:1},"");
 });
-function exitApp(){closeMenu();try{window.close()}catch(e){}setTimeout(()=>{lastBack=Date.now();history.go(-2)},150)}
+function exitApp(){closeMenu();try{window.close()}catch(e){}setTimeout(()=>{exiting=true;history.back()},150)}
 if("serviceWorker" in navigator){navigator.serviceWorker.register("sw.js").then(r=>r.update()).catch(()=>{});let reloaded=false;navigator.serviceWorker.addEventListener("controllerchange",()=>{if(reloaded)return;reloaded=true;location.reload()})}
 render();renderSync();syncNow();
 </script>
