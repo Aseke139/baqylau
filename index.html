@@ -286,6 +286,7 @@ function openMenu(){
   let h=`<h2>Бөлімдер</h2>`+item('data-ds="all"',"Барлығы",open.length,view.section==="all"&&view.counter!=="closed");
   h+=layout.chips.filter(id=>id!=="all"&&id!=="closed").map(id=>item(`data-ds="${id}"`,secName(id),open.filter(c=>inSec(c,id)).length,view.section===id&&view.counter!=="closed")+(id==="sot"?[...SUBS,"sot0"].map(k=>item(`data-ds="${k}" style="padding-left:28px"`,k==="sot0"?"Басқа":secName(k),open.filter(c=>inSec(c,k)).length,view.section===k&&view.counter!=="closed")).join(""):"")).join("");
   h+=`<div class="dsep"></div>`+item('data-ds="closed"',"Жабылған",L.filter(isClosed).length,view.counter==="closed");
+  h+=`<div class="dsep"></div><button class="ditem" id="d_exit"><span>⏻ Шығу</span></button>`;
   $("drawer").innerHTML=h;$("dimmer").hidden=false;requestAnimationFrame(()=>$("drawer").classList.add("open"));
 }
 function closeMenu(){$("drawer").classList.remove("open");$("dimmer").hidden=true}
@@ -356,7 +357,7 @@ $("mvsheet").addEventListener("click",e=>{if(Date.now()-holdAt<600)return;const 
   if(!to)return;const c=all.find(x=>x.id===id);if(!c||c.section===to)return;c.section=to;c.updated=nowISO();saveLocal();render();toast("«"+secName(to)+"» бөліміне жылжытылды")});
 $("dimmer").addEventListener("click",e=>{if(Date.now()-holdAt<600)return;closeMove()});
 $("dimmer").addEventListener("click",()=>{if(Date.now()-holdAt<600)return;closeMenu()});
-$("drawer").addEventListener("click",e=>{const b=e.target.closest("[data-ds]");if(!b)return;const id=b.dataset.ds;
+$("drawer").addEventListener("click",e=>{if(e.target.closest("#d_exit")){exitApp();return}const b=e.target.closest("[data-ds]");if(!b)return;const id=b.dataset.ds;
   if(id==="closed"){view.counter="closed";view.section="all"}else{view.section=id;if(view.counter==="closed")view.counter="all"}
   closeMenu();render();window.scrollTo(0,0)});
 $("btnWeek").addEventListener("click",()=>{weekMode=!weekMode;if(weekMode)ordering=false;render();window.scrollTo(0,0)});
@@ -498,6 +499,26 @@ window.addEventListener("offline",()=>renderSync());
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"){render();syncNow()}});
 setInterval(()=>{if(document.visibilityState==="visible")syncNow()},120000);
 setInterval(render,60000);
+
+/* ---------- Android back button ---------- */
+let lastBack=0;
+function backStep(){
+  if(!$("mvsheet").hidden){closeMove();return true}
+  if(!$("sheet").hidden){const b=$("s_back")||$("g_back");if(b)b.click();else closeSheet();return true}
+  if($("drawer").classList.contains("open")){closeMenu();return true}
+  if(ordering){ordering=false;render();return true}
+  if(weekMode){weekMode=false;render();return true}
+  if(view.counter!=="all"||view.section!=="all"||view.q){view.counter="all";view.section="all";view.q="";$("q").value="";render();window.scrollTo(0,0);return true}
+  return false;
+}
+try{history.replaceState({root:1},"");history.pushState({g:1},"")}catch(e){}
+window.addEventListener("popstate",()=>{
+  if(backStep()){history.pushState({g:1},"");return}
+  const now=Date.now();
+  if(now-lastBack<2000){history.back();return}
+  lastBack=now;toast("Шығу үшін тағы бір рет басыңыз");history.pushState({g:1},"");
+});
+function exitApp(){closeMenu();try{window.close()}catch(e){}setTimeout(()=>{lastBack=Date.now();history.go(-2)},150)}
 if("serviceWorker" in navigator){navigator.serviceWorker.register("sw.js").then(r=>r.update()).catch(()=>{});let reloaded=false;navigator.serviceWorker.addEventListener("controllerchange",()=>{if(reloaded)return;reloaded=true;location.reload()})}
 render();renderSync();syncNow();
 </script>
