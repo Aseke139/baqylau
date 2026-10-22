@@ -71,7 +71,7 @@ h1{font-size:22px;font-weight:700;margin:0}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .phone{display:flex;gap:6px} .phone input{flex:1;min-width:0}
 .steps{display:flex;flex-direction:column;gap:6px;margin-top:6px}
-.step{display:grid;grid-template-columns:28px 1fr 32px;align-items:start;gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:8px}
+.step{display:grid;grid-template-columns:26px 28px 1fr 32px;align-items:start;gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:8px}
 .step input[type=checkbox]{width:20px;height:20px;margin:2px 0 0 2px;accent-color:var(--accent)}
 .step .st{overflow-wrap:anywhere;padding-top:1px}
 .step.done .st{color:var(--muted);text-decoration:line-through}
@@ -107,7 +107,10 @@ h1{font-size:22px;font-weight:700;margin:0}
 .mvsheet h3{margin:0 18px 4px;font-size:16px}
 .mvsheet p{margin:0 18px 8px;font-size:14px;color:var(--muted);overflow-wrap:anywhere}
 .list .row{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
-.row.lp{outline:2px solid var(--accent);transform:scale(.98)}
+.row.lp-wait{transition:transform .45s;transform:scale(.98)}
+.dragging{position:relative;z-index:5;box-shadow:0 10px 28px rgba(15,39,66,.28);outline:2px solid var(--accent);transition:none!important;opacity:.97}
+.steps .step{-webkit-user-select:none;user-select:none}
+.step .sh{border:0;background:none;color:var(--muted);font-size:20px;line-height:1;cursor:grab;touch-action:none;padding:0}
 @media (max-width:420px){.counters{gap:6px}.cnt b{font-size:21px}.two{grid-template-columns:1fr}}
 </style>
 </head>
@@ -255,17 +258,58 @@ function openMenu(){
 }
 function closeMenu(){$("drawer").classList.remove("open");$("dimmer").hidden=true}
 $("btnMenu").addEventListener("click",openMenu);
-/* long press on a case -> move to another section */
-let lpTimer=null,lpFired=false,lpStart=null,lpRow=null;
-function lpCancel(){clearTimeout(lpTimer);lpTimer=null;if(lpRow)lpRow.classList.remove("lp");lpRow=null}
-$("list").addEventListener("pointerdown",e=>{const r=e.target.closest(".row");if(!r||ordering||!r.dataset.id)return;lpFired=false;lpStart=[e.clientX,e.clientY];lpRow=r;
-  lpTimer=setTimeout(()=>{lpFired=true;r.classList.remove("lp");try{navigator.vibrate&&navigator.vibrate(30)}catch(_){}openMove(r.dataset.id)},550);setTimeout(()=>{if(lpTimer&&lpRow)lpRow.classList.add("lp")},200)});
-$("list").addEventListener("pointermove",e=>{if(lpTimer&&lpStart&&Math.hypot(e.clientX-lpStart[0],e.clientY-lpStart[1])>10)lpCancel()});
-["pointerup","pointerleave"].forEach(t=>$("list").addEventListener(t,lpCancel));
-$("list").addEventListener("pointercancel",()=>{ if(lpTimer&&lpRow){ /* browser took over (scroll) — keep timer only if finger still */ } });
-$("list").addEventListener("touchmove",e=>{const t=e.touches[0];if(lpTimer&&lpStart&&t&&Math.hypot(t.clientX-lpStart[0],t.clientY-lpStart[1])>10)lpCancel()},{passive:true});
-$("list").addEventListener("touchend",()=>{if(lpTimer)lpCancel()});
-document.addEventListener("selectstart",e=>{if(e.target.closest&&e.target.closest(".list"))e.preventDefault()});
+/* drag & hold: generic */
+let lpFired=false,holdAt=0;
+function makeDrag(box,itemSel,o){
+  let el=null,timer=null,active=false,moved=false,sx=0,sy=0,grabY=0,from=-1;
+  const items=()=>[...box.querySelectorAll(itemSel)];
+  const pt=e=>e.touches?e.touches[0]:e;
+  function start(e){
+    const it=e.target.closest(itemSel);if(!it||!box.contains(it))return;
+    const onHandle=o.handleSel&&e.target.closest(o.handleSel);
+    if(o.handleSel&&o.handleOnly&&!onHandle)return;
+    if(e.type==="mousedown"&&e.button!==0)return;
+    const p=pt(e);sx=p.clientX;sy=p.clientY;el=it;moved=false;
+    const go=()=>{timer=null;active=true;from=items().indexOf(el);const r=el.getBoundingClientRect();grabY=sy-r.top;el.classList.add("dragging");try{navigator.vibrate&&navigator.vibrate(25)}catch(_){}};
+    if(onHandle){e.preventDefault();go()}else{el.classList.add("lp-wait");timer=setTimeout(go,o.delay||450)}
+  }
+  function move(e){
+    if(!el)return;const p=pt(e);
+    if(!active){if(Math.hypot(p.clientX-sx,p.clientY-sy)>10)cancel();return}
+    e.preventDefault();
+    if(Math.abs(p.clientY-sy)>6)moved=true;
+    el.style.transform="";
+    const list=items();
+    for(const sib of list){if(sib===el)continue;const r=sib.getBoundingClientRect(),mid=r.top+r.height/2;
+      const before=list.indexOf(sib)<list.indexOf(el);
+      if(before&&p.clientY<mid){box.insertBefore(el,sib);break}
+      if(!before&&p.clientY>mid){box.insertBefore(el,sib.nextSibling)}}
+    const r=el.getBoundingClientRect();el.style.transform=`translateY(${p.clientY-grabY-r.top}px)`;
+    if(p.clientY<70)window.scrollBy(0,-12);else if(p.clientY>innerHeight-90)window.scrollBy(0,12);
+    if(o.scroller){if(p.clientY<90)o.scroller.scrollTop-=12;else if(p.clientY>innerHeight-90)o.scroller.scrollTop+=12}
+  }
+  function end(e){
+    if(!el)return;const wasActive=active,it=el,to=items().indexOf(el);
+    if(wasActive&&e&&e.cancelable&&e.type==='touchend')e.preventDefault();
+    clearTimeout(timer);timer=null;el.classList.remove("dragging","lp-wait");el.style.transform="";el=null;active=false;
+    if(!wasActive)return;
+    lpFired=true;setTimeout(()=>lpFired=false,400);
+    if(moved&&to!==from)o.onDrop(from,to,it);else if(!moved&&o.onHold)o.onHold(it);else if(o.onCancel)o.onCancel();
+  }
+  function cancel(){clearTimeout(timer);timer=null;if(el)el.classList.remove("lp-wait");el=null;active=false}
+  box.addEventListener("touchstart",start,{passive:false});box.addEventListener("mousedown",start);
+  box.addEventListener("touchmove",move,{passive:false});window.addEventListener("mousemove",e=>{if(el)move(e)});
+  box.addEventListener("touchend",end);box.addEventListener("touchcancel",end);window.addEventListener("mouseup",()=>{if(el)end()});
+}
+function reorderCases(ids){
+  ensureOrder();const objs=ids.map(id=>all.find(c=>c.id===id)).filter(Boolean);
+  const slots=objs.map(o=>o.order).sort((a,b)=>a-b),t=nowISO();
+  objs.forEach((o,i)=>{if(o.order!==slots[i]){o.order=slots[i];o.updated=t}});saveLocal();render();toast("Реті сақталды");
+}
+makeDrag($("list"),".row[data-id]",{delay:450,
+  onDrop:()=>{if(ordering)return;reorderCases([...$("list").querySelectorAll(".row[data-id]")].map(r=>r.dataset.id))},
+  onHold:it=>{holdAt=Date.now();openMove(it.dataset.id)},onCancel:()=>render()});
+document.addEventListener("selectstart",e=>{if(e.target.closest&&e.target.closest(".list,.steps"))e.preventDefault()});
 $("list").addEventListener("contextmenu",e=>{if(e.target.closest(".row"))e.preventDefault()});
 function openMove(id){
   const c=all.find(x=>x.id===id);if(!c)return;
@@ -273,10 +317,10 @@ function openMove(id){
   $("mvsheet").dataset.id=id;$("mvsheet").hidden=false;$("dimmer").hidden=false;
 }
 function closeMove(){$("mvsheet").hidden=true;$("dimmer").hidden=true}
-$("mvsheet").addEventListener("click",e=>{const b=e.target.closest("[data-mvto]");if(!b)return;const to=b.dataset.mvto,id=$("mvsheet").dataset.id;closeMove();
+$("mvsheet").addEventListener("click",e=>{if(Date.now()-holdAt<600)return;const b=e.target.closest("[data-mvto]");if(!b)return;const to=b.dataset.mvto,id=$("mvsheet").dataset.id;closeMove();
   if(!to)return;const c=all.find(x=>x.id===id);if(!c||c.section===to)return;c.section=to;c.updated=nowISO();saveLocal();render();toast("«"+secName(to)+"» бөліміне жылжытылды")});
-$("dimmer").addEventListener("click",closeMove);
-$("dimmer").addEventListener("click",closeMenu);
+$("dimmer").addEventListener("click",e=>{if(Date.now()-holdAt<600)return;closeMove()});
+$("dimmer").addEventListener("click",()=>{if(Date.now()-holdAt<600)return;closeMenu()});
 $("drawer").addEventListener("click",e=>{const b=e.target.closest("[data-ds]");if(!b)return;const id=b.dataset.ds;
   if(id==="closed"){view.counter="closed";view.section="all"}else{view.section=id;if(view.counter==="closed")view.counter="all"}
   closeMenu();render();window.scrollTo(0,0)});
@@ -309,7 +353,7 @@ function renderCase(){
   </div>
   <div class="f"><label for="f_phone">Телефон</label><div class="phone"><input id="f_phone" value="${esc(d.phone)}" inputmode="tel" placeholder="+7 …"><a class="btn" id="s_call" href="tel:${esc((d.phone||"").replace(/[^\d+]/g,""))}">Қоңырау</a></div></div>
   <div class="f"><span class="lbl">Кезеңдер ${d.steps.length?`· ${d.steps.filter(s=>s.done).length}/${d.steps.length}`:""}</span>
-    <div class="steps" id="steps">${d.steps.map((s,i)=>`<div class="step ${s.done?"done":""}"><input type="checkbox" id="st_${i}" data-i="${i}" ${s.done?"checked":""}><label class="st" for="st_${i}">${esc(s.t)}</label><button class="x" data-del="${i}" aria-label="Өшіру">×</button></div>`).join("")}</div>
+    <div class="steps" id="steps">${d.steps.map((s,i)=>`<div class="step ${s.done?"done":""}"><button class="sh" type="button" aria-label="Жылжыту">⠿</button><input type="checkbox" id="st_${i}" data-i="${i}" ${s.done?"checked":""}><label class="st" for="st_${i}">${esc(s.t)}</label><button class="x" data-del="${i}" aria-label="Өшіру">×</button></div>`).join("")}</div>
     <div class="addstep"><input id="f_newstep" placeholder="Жаңа кезең…"><button class="btn" id="s_addstep" type="button">Қосу</button></div>
   </div>
   <div class="f"><label for="f_desc">Сипаттама</label><textarea id="f_desc" placeholder="Клиент, сот, нөмірлер, не істеу керек…">${esc(d.desc)}</textarea></div>
@@ -324,6 +368,7 @@ function renderCase(){
   $("s_addstep").onclick=()=>{const v=$("f_newstep").value.trim();if(!v)return;pull();d.steps.push({t:v,done:false});renderCase();$("f_newstep").focus()};
   $("f_newstep").onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();$("s_addstep").click()}};
   $("steps").onchange=e=>{const i=e.target.dataset.i;if(i==null)return;pull();d.steps[i].done=e.target.checked;renderCase()};
+  makeDrag($("steps"),".step",{handleSel:".sh",delay:450,scroller:$("sheet"),onDrop:(f,t)=>{pull();const [x]=d.steps.splice(f,1);d.steps.splice(t,0,x);renderCase()},onCancel:()=>renderCase()});
   $("steps").onclick=e=>{const i=e.target.dataset.del;if(i==null)return;pull();d.steps.splice(+i,1);renderCase()};
   if($("s_move"))$("s_move").onclick=()=>{const id=editingId;$("sheet").hidden=true;document.body.style.overflow="";draft=null;editingId=null;openMove(id)};
   if($("s_close"))$("s_close").onclick=()=>{pull();d.status="Жабылды";saveCase()};
