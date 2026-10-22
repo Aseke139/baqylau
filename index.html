@@ -281,7 +281,8 @@ function makeDrag(box,itemSel,o){
   }
   function move(e){
     if(!el)return;const p=pt(e);
-    if(!active){if(Math.hypot(p.clientX-sx,p.clientY-sy)>10)cancel();return}
+    if(!active){if(Math.hypot(p.clientX-sx,p.clientY-sy)>6)cancel();return}
+    if(e.type==="touchmove"&&!e.cancelable){abort();return}
     e.preventDefault();
     if(Math.abs(p.clientY-sy)>6)moved=true;
     el.style.transform="";
@@ -303,6 +304,8 @@ function makeDrag(box,itemSel,o){
     if(moved&&to!==from)o.onDrop(from,to,it);else if(!moved&&o.onHold)o.onHold(it);else if(o.onCancel)o.onCancel();
   }
   function cancel(){clearTimeout(timer);timer=null;if(el)el.classList.remove("lp-wait");el=null;active=false}
+  function abort(){const was=active;clearTimeout(timer);timer=null;if(el){el.classList.remove("dragging","lp-wait");el.style.transform=""}el=null;active=false;if(was&&o.onCancel)o.onCancel()}
+  const onScroll=()=>{if(el&&!active)cancel()};window.addEventListener("scroll",onScroll,{passive:true});if(o.scroller)o.scroller.addEventListener("scroll",onScroll,{passive:true});
   box.addEventListener("touchstart",start,{passive:false});box.addEventListener("mousedown",start);
   box.addEventListener("touchmove",move,{passive:false});window.addEventListener("mousemove",e=>{if(el)move(e)});
   box.addEventListener("touchend",end);box.addEventListener("touchcancel",end);window.addEventListener("mouseup",()=>{if(el)end()});
@@ -312,7 +315,7 @@ function reorderCases(ids){
   const slots=objs.map(o=>o.order).sort((a,b)=>a-b),t=nowISO();
   objs.forEach((o,i)=>{if(o.order!==slots[i]){o.order=slots[i];o.updated=t}});saveLocal();render();toast("Реті сақталды");
 }
-makeDrag($("list"),".row[data-id]",{delay:450,
+makeDrag($("list"),".row[data-id]",{delay:600,
   onDrop:()=>{if(ordering)return;reorderCases([...$("list").querySelectorAll(".row[data-id]")].map(r=>r.dataset.id))},
   onHold:it=>{holdAt=Date.now();openMove(it.dataset.id)},onCancel:()=>render()});
 document.addEventListener("selectstart",e=>{if(e.target.closest&&e.target.closest(".list,.steps"))e.preventDefault()});
