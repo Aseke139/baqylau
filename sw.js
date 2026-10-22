@@ -1,4 +1,4 @@
-const CACHE = "baqylau-v9";
+const CACHE = "baqylau-v10";
 const SHELL = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./icon-180.png"];
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
@@ -8,12 +8,13 @@ self.addEventListener("activate", e => {
 });
 self.addEventListener("fetch", e => {
   const u = new URL(e.request.url);
-  if (e.request.method !== "GET" || u.origin !== location.origin) return; // GitHub API и шрифты — мимо кэша
-  e.respondWith(
-    caches.open(CACHE).then(async c => {
-      const hit = await c.match(e.request, { ignoreSearch: true });
-      const net = fetch(e.request).then(r => { if (r.ok) c.put(e.request, r.clone()); return r; }).catch(() => hit);
-      return hit || net;
-    })
-  );
+  if (e.request.method !== "GET" || u.origin !== location.origin) return;
+  const isPage = e.request.mode === "navigate" || u.pathname.endsWith("/") || u.pathname.endsWith(".html");
+  if (isPage) {
+    // сначала сеть (свежая версия), без интернета — из кэша
+    e.respondWith(fetch(e.request, { cache: "no-store" }).then(r => { const c = r.clone(); caches.open(CACHE).then(cc => cc.put("./index.html", c)); return r; })
+      .catch(() => caches.match("./index.html")));
+    return;
+  }
+  e.respondWith(caches.match(e.request, { ignoreSearch: true }).then(hit => hit || fetch(e.request)));
 });

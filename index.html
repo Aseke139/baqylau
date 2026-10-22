@@ -463,7 +463,7 @@ window.addEventListener("offline",()=>renderSync());
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"){render();syncNow()}});
 setInterval(()=>{if(document.visibilityState==="visible")syncNow()},120000);
 setInterval(render,60000);
-if("serviceWorker" in navigator){navigator.serviceWorker.register("sw.js").catch(()=>{})}
+if("serviceWorker" in navigator){navigator.serviceWorker.register("sw.js").then(r=>r.update()).catch(()=>{});let reloaded=false;navigator.serviceWorker.addEventListener("controllerchange",()=>{if(reloaded)return;reloaded=true;location.reload()})}
 render();renderSync();syncNow();
 </script>
 </body>
