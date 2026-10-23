@@ -187,7 +187,8 @@ let all=load(K.cases,[]);           // includes tombstones {deleted:true}
 let cfg=load(K.cfg,{owner:"Aseke139",repo:"baqylau-data",path:"data.json",token:""});
 let dirty=load(K.dirty,false);
 let lastSync=load(K.last,"");
-let view={counter:"all",section:"all",q:""};
+let view=(()=>{const v={counter:"all",section:"all",q:""};try{const s=JSON.parse(localStorage.getItem("bq_view")||"null");if(s&&typeof s.counter==="string")v.counter=s.counter;if(s&&typeof s.section==="string")v.section=s.section}catch(e){}return v})();
+function saveView(){try{localStorage.setItem("bq_view",JSON.stringify({counter:view.counter,section:view.section}))}catch(e){}}
 let zoom=load("baqylau.zoom",115);function applyZoom(){document.body.style.zoom=zoom+"%"}applyZoom();
 let ordering=false;
 const CNT={over:{n:"Мерзімі өтті",cls:"red"},today:{n:"Бүгін",cls:"amber"},week:{n:"7 күн ішінде",cls:""},all:{n:"Ашық істер",cls:""}};
@@ -286,8 +287,8 @@ document.addEventListener("click",e=>{
   const mh=e.target.closest("[data-mh]");if(mh){moveIn(layout.chips,mh.dataset.mh,+mh.dataset.d);return}
   const mo=e.target.closest("[data-mo]");if(mo){moveCase(mo.dataset.mo,+mo.dataset.d);return}
   if(ordering)return;
-  const k=e.target.closest("[data-k]");if(k){view.counter=(view.counter===k.dataset.k&&k.dataset.k!=="all")?"all":k.dataset.k;render();return}
-  const s=e.target.closest("[data-s]");if(s){view.section=s.dataset.s;render();return}
+  const k=e.target.closest("[data-k]");if(k){view.counter=(view.counter===k.dataset.k&&k.dataset.k!=="all")?"all":k.dataset.k;saveView();render();return}
+  const s=e.target.closest("[data-s]");if(s){view.section=s.dataset.s;saveView();render();return}
   const ns=e.target.closest("[data-ns]");if(ns&&locked){toast("🔒 Құлып қосулы");return}if(ns){if(lpFired){lpFired=false;return}const c=all.find(x=>x.id===ns.dataset.ns),i=+ns.dataset.si;if(c&&c.steps&&c.steps[i]){c.steps[i].done=true;c.updated=nowISO();saveLocal();render();toast("✓ "+c.steps[i].t.slice(0,40))}return}
   const r=e.target.closest(".row");if(r){if(lpFired){lpFired=false;return}openCase(r.dataset.id);return}
 });
@@ -374,7 +375,7 @@ $("dimmer").addEventListener("click",e=>{if(Date.now()-holdAt<600)return;closeMo
 $("dimmer").addEventListener("click",()=>{if(Date.now()-holdAt<600)return;closeMenu()});
 $("drawer").addEventListener("click",e=>{if(e.target.closest("#d_exit")){exitApp();return}const b=e.target.closest("[data-ds]");if(!b)return;const id=b.dataset.ds;
   if(id==="closed"){view.counter="closed";view.section="all"}else{view.section=id;if(view.counter==="closed")view.counter="all"}
-  closeMenu();render();window.scrollTo(0,0)});
+  saveView();closeMenu();render();window.scrollTo(0,0)});
 $("btnLock").addEventListener("click",()=>setLock(!locked));
 $("btnFind").addEventListener("click",()=>{weekMode=false;ordering=false;render();window.scrollTo(0,0);setTimeout(()=>$("q").focus(),50)});
 $("btnWeek").addEventListener("click",()=>{weekMode=!weekMode;if(weekMode)ordering=false;render();window.scrollTo(0,0)});
@@ -526,7 +527,7 @@ function backStep(){
   if($("drawer").classList.contains("open")){closeMenu();return true}
   if(ordering){ordering=false;render();return true}
   if(weekMode){weekMode=false;render();return true}
-  if(view.counter!=="all"||view.section!=="all"||view.q){view.counter="all";view.section="all";view.q="";$("q").value="";render();window.scrollTo(0,0);return true}
+  if(view.counter!=="all"||view.section!=="all"||view.q){view.counter="all";view.section="all";view.q="";$("q").value="";saveView();render();window.scrollTo(0,0);return true}
   return false;
 }
 try{history.replaceState({root:1},"");history.pushState({g:1},"")}catch(e){}
