@@ -188,7 +188,7 @@ let all=load(K.cases,[]);           // includes tombstones {deleted:true}
 let cfg=load(K.cfg,{owner:"Aseke139",repo:"baqylau-data",path:"data.json",token:""});
 let dirty=load(K.dirty,false);
 let lastSync=load(K.last,"");
-let view=(()=>{const v={counter:"all",section:"all",q:""};try{const s=JSON.parse(localStorage.getItem("bq_view")||"null");if(s&&typeof s.counter==="string")v.counter=s.counter;if(s&&typeof s.section==="string")v.section=s.section}catch(e){}return v})();
+let view={counter:"all",section:"all",q:""}; // әр ашқанда барлық істер көрсетіледі
 function saveView(){try{localStorage.setItem("bq_view",JSON.stringify({counter:view.counter,section:view.section}))}catch(e){}}
 let zoom=load("baqylau.zoom",115);function applyZoom(){document.body.style.zoom=zoom+"%"}applyZoom();
 let ordering=false;
@@ -265,7 +265,7 @@ function render(){
   const showSub=!ordering&&inSot(view.section)&&view.counter!=="closed";$("subchips").hidden=!showSub;
   if(showSub)$("subchips").innerHTML=[["sot","Барлығы"],...SUBS.map(k=>[k,SHORT[k]]),["sot0","Басқа"]].map(([k,nm])=>`<button class="chip" data-s="${k}" aria-pressed="${view.section===k}"><span class="nm">${esc(nm)}</span><small>${base.filter(c=>inSec(c,k)).length}</small></button>`).join("");
   const F=filtered();
-  if(!F.length){$("list").innerHTML=`<div class="empty">${L.length?"Бұл сүзгі бойынша іс жоқ.":"Әзірге іс жоқ. «Баптау» арқылы GitHub-ты қосыңыз немесе + батырмасымен іс қосыңыз."}</div>`;return}
+  if(!F.length){$("list").innerHTML=`<div class="empty">${L.length?"Бұл сүзгі бойынша іс жоқ.<br><br><button class=\"btn\" id=\"btnReset\">Барлық істерді көрсету</button>":"Әзірге іс жоқ. «Баптау» арқылы GitHub-ты қосыңыз немесе + батырмасымен іс қосыңыз."}</div>`;return}
   $("list").innerHTML=F.map((c,i)=>{const u=urgency(c),d=parseDue(c.due),st=c.steps||[],dn=st.filter(s=>s.done).length,p=c.priority||0;
     if(ordering)return`<div class="row ord ${u}"><span class="bar"></span><span class="main"><span class="t">${esc(c.title)}</span><span class="meta"><span>${esc(secName(c.section))}</span></span></span><span class="side"><button class="mvb" data-mo="${esc(c.id)}" data-d="-1" ${i===0?"disabled":""} aria-label="Жоғары">↑</button><button class="mvb" data-mo="${esc(c.id)}" data-d="1" ${i===F.length-1?"disabled":""} aria-label="Төмен">↓</button></span></div>`;
     return`<button class="row ${u}" data-id="${esc(c.id)}"><span class="bar"></span><span class="main"><span class="t">${p?`<span class="pri p${p}">${"!".repeat(p)}</span>`:""}${esc(c.title)}</span><span class="meta"><span>${esc(SHORT[c.section]||secName(c.section))}</span>${c.status&&c.status!=="Жұмыста"?`<span>· ${esc(c.status)}</span>`:""}${st.length?`<span>· ${dn}/${st.length} кезең</span>`:""}</span>${(()=>{const i=st.findIndex(x=>!x.done);return i<0||isClosed(c)?"":`<span class="nstep" data-ns="${esc(c.id)}" data-si="${i}" role="checkbox" aria-checked="false"><span class="ck"></span><span>${esc(st[i].t)}</span></span>`})()}</span><span class="side">${d?`<span class="due">${fmtDue(d)}</span>${isClosed(c)?"":`<span class="rel">${relText(dayDiff(d))}</span>`}`:`<span class="due" style="color:var(--muted)">мерзімсіз</span>`}</span></button>`}).join("");
@@ -284,6 +284,7 @@ function toast(m){const t=$("toast");t.textContent=m;t.hidden=false;clearTimeout
 
 document.addEventListener("click",e=>{
   if(e.target.closest("#sheet"))return;
+  if(e.target.closest("#btnReset")){view.counter="all";view.section="all";view.q="";$("q").value="";saveView();render();window.scrollTo(0,0);return}
   const mc=e.target.closest("[data-mc]");if(mc){moveIn(layout.counters,mc.dataset.mc,+mc.dataset.d);return}
   const mh=e.target.closest("[data-mh]");if(mh){moveIn(layout.chips,mh.dataset.mh,+mh.dataset.d);return}
   const mo=e.target.closest("[data-mo]");if(mo){moveCase(mo.dataset.mo,+mo.dataset.d);return}
