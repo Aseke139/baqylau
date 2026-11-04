@@ -169,9 +169,10 @@ const SECTIONS=[
   {id:"shart",name:"Шарттар тізілімі"},
   {id:"ister",name:"Істер"},
   {id:"naraz",name:"Наразылық болуы мүмкін"},
-  {id:"qarsylyq",name:"Қарсылық нотариусқа"}
+  {id:"qarsylyq",name:"Қарсылық нотариусқа"},
+  {id:"qaryz",name:"Маған қарыздар"}
 ];
-const SHORT={all:"Барлығы",closed:"Жабылған",sot:"Сот",qalpyna:"Қалпына келтіру",onai:"Оңайлатылған",talap:"Талап арыздар",otbasy:"Отбасы",suraular:"Сұраулар",grafik:"График",bankrot:"Банкрот",jumys:"Жұмыссыз",fu:"Қаржы бас.",shart:"Шарттар",ister:"Істер",naraz:"Наразылық",qarsylyq:"Қарсылық"};
+const SHORT={all:"Барлығы",closed:"Жабылған",sot:"Сот",qalpyna:"Қалпына келтіру",onai:"Оңайлатылған",talap:"Талап арыздар",otbasy:"Отбасы",suraular:"Сұраулар",grafik:"График",bankrot:"Банкрот",jumys:"Жұмыссыз",fu:"Қаржы бас.",shart:"Шарттар",ister:"Істер",naraz:"Наразылық",qarsylyq:"Қарсылық",qaryz:"Қарыздар"};
 const STATUSES=["Жұмыста","Жауап күтуде","Шешім шықты","Жабылды"];
 const PRI=[{v:0,n:"Жоқ"},{v:1,n:"Төмен"},{v:2,n:"Орта"},{v:3,n:"Жоғары"}];
 const K={cases:"baqylau.cases",cfg:"baqylau.cfg",dirty:"baqylau.dirty",last:"baqylau.lastSync"};
@@ -188,7 +189,7 @@ let all=load(K.cases,[]);           // includes tombstones {deleted:true}
 let cfg=load(K.cfg,{owner:"Aseke139",repo:"baqylau-data",path:"data.json",token:""});
 let dirty=load(K.dirty,false);
 let lastSync=load(K.last,"");
-let view={counter:"all",section:"all",q:""}; // әр ашқанда барлық істер көрсетіледі
+let view=(()=>{const v={counter:"all",section:"all",q:""};try{const s=JSON.parse(localStorage.getItem("bq_view")||"null");if(s&&typeof s.counter==="string")v.counter=s.counter;if(s&&typeof s.section==="string")v.section=s.section}catch(e){}return v})(); // таңдалған бөлім сақталады
 function saveView(){try{localStorage.setItem("bq_view",JSON.stringify({counter:view.counter,section:view.section}))}catch(e){}}
 let zoom=load("baqylau.zoom",115);function applyZoom(){document.body.style.zoom=zoom+"%"}applyZoom();
 let ordering=false;
@@ -200,7 +201,7 @@ let layout=load("baqylau.layout",{});
 function fixLayout(){
   const ck=Object.keys(CNT),sk=["all",...SECTIONS.map(x=>x.id).filter(x=>!SUBS.includes(x)),"closed"];
   layout.counters=(layout.counters||[]).filter(k=>ck.includes(k));ck.forEach(k=>{if(!layout.counters.includes(k))layout.counters.push(k)});
-  layout.chips=(layout.chips||[]).filter(k=>sk.includes(k));sk.forEach(k=>{if(!layout.chips.includes(k))layout.chips.push(k)});
+  layout.chips=(layout.chips||[]).filter(k=>sk.includes(k));sk.forEach(k=>{if(!layout.chips.includes(k)){if(k==="qaryz")layout.chips.splice(1,0,k);else layout.chips.push(k)}});
 }
 fixLayout();
 function moveIn(arr,k,d){const i=arr.indexOf(k),j=i+d;if(i<0||j<0||j>=arr.length)return;[arr[i],arr[j]]=[arr[j],arr[i]];store("baqylau.layout",layout);render()}
