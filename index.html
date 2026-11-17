@@ -170,9 +170,10 @@ const SECTIONS=[
   {id:"ister",name:"Істер"},
   {id:"naraz",name:"Наразылық болуы мүмкін"},
   {id:"qarsylyq",name:"Қарсылық нотариусқа"},
-  {id:"qaryz",name:"Маған қарыздар"}
+  {id:"qaryz",name:"Маған қарыздар"},
+  {id:"otyrys",name:"Сот отырыстары"}
 ];
-const SHORT={all:"Барлығы",closed:"Жабылған",sot:"Сот",qalpyna:"Қалпына келтіру",onai:"Оңайлатылған",talap:"Талап арыздар",otbasy:"Отбасы",suraular:"Сұраулар",grafik:"График",bankrot:"Банкрот",jumys:"Жұмыссыз",fu:"Қаржы бас.",shart:"Шарттар",ister:"Істер",naraz:"Наразылық",qarsylyq:"Қарсылық",qaryz:"Қарыздар"};
+const SHORT={all:"Барлығы",closed:"Жабылған",sot:"Сот",qalpyna:"Қалпына келтіру",onai:"Оңайлатылған",talap:"Талап арыздар",otbasy:"Отбасы",suraular:"Сұраулар",grafik:"График",bankrot:"Банкрот",jumys:"Жұмыссыз",fu:"Қаржы бас.",shart:"Шарттар",ister:"Істер",naraz:"Наразылық",qarsylyq:"Қарсылық",qaryz:"Қарыздар",otyrys:"Сот отырыстары"};
 const STATUSES=["Жұмыста","Жауап күтуде","Шешім шықты","Жабылды"];
 const PRI=[{v:0,n:"Жоқ"},{v:1,n:"Төмен"},{v:2,n:"Орта"},{v:3,n:"Жоғары"}];
 const K={cases:"baqylau.cases",cfg:"baqylau.cfg",dirty:"baqylau.dirty",last:"baqylau.lastSync"};
@@ -201,7 +202,7 @@ let layout=load("baqylau.layout",{});
 function fixLayout(){
   const ck=Object.keys(CNT),sk=["all",...SECTIONS.map(x=>x.id).filter(x=>!SUBS.includes(x)),"closed"];
   layout.counters=(layout.counters||[]).filter(k=>ck.includes(k));ck.forEach(k=>{if(!layout.counters.includes(k))layout.counters.push(k)});
-  layout.chips=(layout.chips||[]).filter(k=>sk.includes(k));sk.forEach(k=>{if(!layout.chips.includes(k)){if(k==="qaryz")layout.chips.splice(1,0,k);else layout.chips.push(k)}});
+  layout.chips=(layout.chips||[]).filter(k=>sk.includes(k));sk.forEach(k=>{if(!layout.chips.includes(k)){if(k==="qaryz"||k==="otyrys")layout.chips.splice(1,0,k);else layout.chips.push(k)}});
 }
 fixLayout();
 function moveIn(arr,k,d){const i=arr.indexOf(k),j=i+d;if(i<0||j<0||j>=arr.length)return;[arr[i],arr[j]]=[arr[j],arr[i]];store("baqylau.layout",layout);render()}
@@ -267,6 +268,10 @@ function render(){
   if(showSub)$("subchips").innerHTML=[["sot","Барлығы"],...SUBS.map(k=>[k,SHORT[k]]),["sot0","Басқа"]].map(([k,nm])=>`<button class="chip" data-s="${k}" aria-pressed="${view.section===k}"><span class="nm">${esc(nm)}</span><small>${base.filter(c=>inSec(c,k)).length}</small></button>`).join("");
   const F=filtered();
   if(!F.length){$("list").innerHTML=`<div class="empty">${L.length?"Бұл сүзгі бойынша іс жоқ.<br><br><button class=\"btn\" id=\"btnReset\">Барлық істерді көрсету</button>":"Әзірге іс жоқ. «Баптау» арқылы GitHub-ты қосыңыз немесе + батырмасымен іс қосыңыз."}</div>`;return}
+  if(view.section==="otyrys"&&!ordering){const pp=x=>String(x).padStart(2,"0"),g=[],idx={};
+    F.slice().sort((a,b)=>(parseDue(a.due)||8.64e15)-(parseDue(b.due)||8.64e15)).forEach(c=>{const d=parseDue(c.due),k=d?d.toDateString():"none";if(!(k in idx)){idx[k]=g.length;g.push({d,n:d?dayDiff(d):null,L:[]})}g[idx[k]].L.push(c)});
+    $("list").innerHTML=g.map(x=>{const h=!x.d?"Күні белгісіз":(x.n===0?"Бүгін · ":x.n===1?"Ертең · ":"")+pp(x.d.getDate())+"."+pp(x.d.getMonth()+1)+" · "+KDAYS[x.d.getDay()];
+      return`<div class="wk-h ${x.n===0?"amber":x.n!==null&&x.n<0?"red":""}">${h}</div>`+x.L.map(c=>{const d=parseDue(c.due);return`<button class="row ${urgency(c)}" data-id="${esc(c.id)}"><span class="bar"></span><span class="main"><span class="t">${esc(c.title)}</span></span><span class="side"><span class="due">${d?pp(d.getHours())+":"+pp(d.getMinutes()):"—"}</span></span></button>`}).join("")}).join("");return}
   $("list").innerHTML=F.map((c,i)=>{const u=urgency(c),d=parseDue(c.due),st=c.steps||[],dn=st.filter(s=>s.done).length,p=c.priority||0;
     if(ordering)return`<div class="row ord ${u}"><span class="bar"></span><span class="main"><span class="t">${esc(c.title)}</span><span class="meta"><span>${esc(secName(c.section))}</span></span></span><span class="side"><button class="mvb" data-mo="${esc(c.id)}" data-d="-1" ${i===0?"disabled":""} aria-label="Жоғары">↑</button><button class="mvb" data-mo="${esc(c.id)}" data-d="1" ${i===F.length-1?"disabled":""} aria-label="Төмен">↓</button></span></div>`;
     return`<button class="row ${u}" data-id="${esc(c.id)}"><span class="bar"></span><span class="main"><span class="t">${p?`<span class="pri p${p}">${"!".repeat(p)}</span>`:""}${esc(c.title)}</span><span class="meta"><span>${esc(SHORT[c.section]||secName(c.section))}</span>${c.status&&c.status!=="Жұмыста"?`<span>· ${esc(c.status)}</span>`:""}${st.length?`<span>· ${dn}/${st.length} кезең</span>`:""}</span>${(()=>{const i=st.findIndex(x=>!x.done);return i<0||isClosed(c)?"":`<span class="nstep" data-ns="${esc(c.id)}" data-si="${i}" role="checkbox" aria-checked="false"><span class="ck"></span><span>${esc(st[i].t)}</span></span>`})()}</span><span class="side">${d?`<span class="due">${fmtDue(d)}</span>${isClosed(c)?"":`<span class="rel">${relText(dayDiff(d))}</span>`}`:`<span class="due" style="color:var(--muted)">мерзімсіз</span>`}</span></button>`}).join("");
