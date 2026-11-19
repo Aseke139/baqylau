@@ -63,6 +63,23 @@ h1{font-size:19px;font-weight:700;margin:0}
 .due{font-family:var(--sans);font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;display:block}
 .rel{display:inline-block;margin-top:4px;font-size:13px;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--accent-soft);color:var(--accent)}
 .over .rel{background:var(--red);color:#fff} .soon .rel{background:var(--amber);color:#fff}
+.fu-top{display:flex;gap:8px;margin:2px 0 8px}
+.fu-box{flex:1;border-radius:12px;padding:10px 12px;background:#e8f0fb;border:2px solid #0b3a78;color:#0b3a78}
+.fu-box b{display:block;font-size:30px;line-height:1.05}.fu-box span{font-size:14px;font-weight:700}
+.fu-box.alarm{background:#e00000;border-color:#9a0000;color:#fff;animation:fuPulse 1.2s ease-in-out infinite}
+.fu-card{display:block;width:100%;text-align:left;font:inherit;color:#0b2347;background:#fff;border:2px solid #2f6fd0;border-radius:12px;padding:10px 12px;margin-bottom:8px;cursor:pointer}
+.fu-card .ft{font-size:17px;font-weight:800;line-height:1.2;overflow-wrap:anywhere}
+.fu-card .fd{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-top:6px}
+.fu-card .fdate{font-size:22px;font-weight:800}
+.fu-card .frel{font-size:14px;font-weight:800;padding:2px 8px;border-radius:6px;background:#2f6fd0;color:#fff;white-space:nowrap}
+.fu-card .fwhat{font-size:14px;font-weight:600;margin-top:2px;overflow-wrap:anywhere}
+.fu-card .fsteps{margin-top:6px;font-size:13px;line-height:1.35;opacity:.9}
+.fu-card.alarm{background:#e00000;border-color:#9a0000;color:#fff;box-shadow:0 0 0 3px rgba(224,0,0,.35);animation:fuPulse 1.2s ease-in-out infinite}
+.fu-card.alarm .frel{background:#fff;color:#c00000}
+.fu-card.nodue{border-style:dashed;border-color:#8aa3c4}
+@keyframes fuPulse{0%,100%{box-shadow:0 0 0 2px rgba(224,0,0,.30)}50%{box-shadow:0 0 0 7px rgba(224,0,0,.55)}}
+.chip.fu-alarm,.chips .chip.fu-alarm{background:#e00000!important;border-color:#9a0000!important;color:#fff!important;font-weight:800}
+.chip.fu-alarm small{color:#fff!important;opacity:1}
 .empty{padding:28px 16px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:10px}
 .bbar{position:fixed;left:0;right:0;bottom:0;z-index:15;display:grid;grid-template-columns:repeat(4,1fr);background:var(--surface);border-top:1px solid var(--line);padding:4px max(8px,env(safe-area-inset-left,0px)) calc(4px + env(safe-area-inset-bottom,0px));box-shadow:0 -2px 10px rgba(15,39,66,.08)}
 .bbar button{border:0;background:none;color:var(--muted);font:inherit;display:flex;flex-direction:column;align-items:center;gap:0;padding:4px 0;cursor:pointer;border-radius:10px}
@@ -165,7 +182,7 @@ const SECTIONS=[
   {id:"grafik",name:"График алу"},
   {id:"bankrot",name:"Соттан тыс банкроттық"},
   {id:"jumys",name:"Жұмыссыздық жәрдемақысы"},
-  {id:"fu",name:"Қаржы басқарушысы ретінде"},
+  {id:"fu",name:"Қаржы басқарушысы"},
   {id:"shart",name:"Шарттар тізілімі"},
   {id:"ister",name:"Істер"},
   {id:"naraz",name:"Наразылық болуы мүмкін"},
@@ -173,7 +190,7 @@ const SECTIONS=[
   {id:"qaryz",name:"Маған қарыздар"},
   {id:"otyrys",name:"Сот отырыстары"}
 ];
-const SHORT={all:"Барлығы",closed:"Жабылған",sot:"Сот",qalpyna:"Қалпына келтіру",onai:"Оңайлатылған",talap:"Талап арыздар",otbasy:"Отбасы",suraular:"Сұраулар",grafik:"График",bankrot:"Банкрот",jumys:"Жұмыссыз",fu:"Қаржы бас.",shart:"Шарттар",ister:"Істер",naraz:"Наразылық",qarsylyq:"Қарсылық",qaryz:"Қарыздар",otyrys:"Сот отырыстары"};
+const SHORT={all:"Барлығы",closed:"Жабылған",sot:"Сот",qalpyna:"Қалпына келтіру",onai:"Оңайлатылған",talap:"Талап арыздар",otbasy:"Отбасы",suraular:"Сұраулар",grafik:"График",bankrot:"Банкрот",jumys:"Жұмыссыз",fu:"Қаржы басқарушысы",shart:"Шарттар",ister:"Істер",naraz:"Наразылық",qarsylyq:"Қарсылық",qaryz:"Қарыздар",otyrys:"Сот отырыстары"};
 const STATUSES=["Жұмыста","Жауап күтуде","Шешім шықты","Жабылды"];
 const PRI=[{v:0,n:"Жоқ"},{v:1,n:"Төмен"},{v:2,n:"Орта"},{v:3,n:"Жоғары"}];
 const K={cases:"baqylau.cases",cfg:"baqylau.cfg",dirty:"baqylau.dirty",last:"baqylau.lastSync"};
@@ -218,7 +235,22 @@ function dayDiff(d){const b=new Date(d);b.setHours(0,0,0,0);return Math.round((b
 function fmtDue(d){const p=n=>String(n).padStart(2,"0");const y=d.getFullYear()===new Date().getFullYear()?"":"."+String(d.getFullYear()).slice(2);return p(d.getDate())+"."+p(d.getMonth()+1)+y+" "+p(d.getHours())+":"+p(d.getMinutes())}
 function relText(n){if(n===0)return"⏰ Бүгін";if(n===1)return"⏰ Ертең";if(n<0)return"⚠ "+Math.abs(n)+" күн өтті";if(n<=2)return"⏰ "+n+" күн қалды";return n+" күн қалды"}
 const isClosed=c=>c.status==="Жабылды";
-function urgency(c){if(isClosed(c))return"done";const d=parseDue(c.due);if(!d)return"none";const n=dayDiff(d);return n<0?"over":n<=2?"soon":"ok"}
+function urgency(c){if(isClosed(c))return"done";const d=c.section==="fu"?(fuNext(c)||{}).d:parseDue(c.due);if(!d)return"none";const n=dayDiff(d);return n<0?"over":n<=2?"soon":"ok"}
+/* Қаржы басқарушысы: ең жақын мерзім = іс мерзімі немесе орындалмаған кезеңдегі күн (мыс. «20.11 Хабарландыру ДГД») */
+function stepDate(t){const m=String(t||"").match(/(^|\D)(\d{1,2})\.(\d{1,2})(?:\.(\d{2,4}))?(?!\d)/);if(!m)return null;let y=m[4]?+m[4]:new Date().getFullYear();if(y<100)y+=2000;const d=new Date(y,+m[3]-1,+m[2],9,0);return isNaN(d)||d.getDate()!==+m[2]?null:d}
+function fuDeadlines(c){const r=[];const d=parseDue(c.due);if(d)r.push({d,t:"Іс мерзімі"});(c.steps||[]).forEach(s=>{if(s.done)return;const sd=stepDate(s.t);if(sd)r.push({d:sd,t:s.t})});return r.sort((a,b)=>a.d-b.d)}
+function fuNext(c){return fuDeadlines(c)[0]||null}
+function fuAlarm(c){if(isClosed(c))return false;const x=fuNext(c);return!!x&&dayDiff(x.d)<=1}
+function fuRel(n){return n<0?"✗ МЕРЗІМІ ӨТТІ · "+Math.abs(n)+" күн":n===0?"✗ БҮГІН!":n===1?"✗ ЕРТЕҢ!":"✓ "+n+" күн қалды"}
+function renderFu(F){
+  const open=F.filter(c=>!isClosed(c)),al=open.filter(fuAlarm);
+  const pp=x=>String(x).padStart(2,"0"),fd=d=>pp(d.getDate())+"."+pp(d.getMonth()+1)+"."+d.getFullYear();
+  const srt=F.slice().sort((a,b)=>{const A=fuAlarm(a),B=fuAlarm(b);if(A!==B)return A?-1:1;const x=fuNext(a),y=fuNext(b);if(x&&y)return x.d-y.d;if(x)return-1;if(y)return 1;return String(a.title).localeCompare(String(b.title))});
+  const top=`<div class="fu-top"><div class="fu-box"><b>${open.length}</b><span>Істер</span></div><div class="fu-box ${al.length?"alarm":""}"><b>${al.length}</b><span>${al.length?"✗ Шұғыл мерзім":"✓ Шұғыл жоқ"}</span></div></div>`;
+  return top+srt.map(c=>{const x=fuNext(c),a=fuAlarm(c),n=x?dayDiff(x.d):null;
+    const rest=fuDeadlines(c).slice(1).map(y=>`${fd(y.d)} · ${esc(y.t)}`).join("<br>");
+    return`<button class="fu-card ${a?"alarm":""} ${x?"":"nodue"}" data-id="${esc(c.id)}"><div class="ft">${esc(c.title)}</div>${x?`<div class="fd"><span class="fdate">${fd(x.d)}</span><span class="frel">${isClosed(c)?"✓ Орындалды":fuRel(n)}</span></div><div class="fwhat">${esc(x.t)}</div>`:`<div class="fwhat">Мерзім жоқ</div>`}${rest?`<div class="fsteps">${rest}</div>`:""}</button>`}).join("");
+}
 function counterMatch(c,k){
   if(k==="closed")return isClosed(c);
   if(isClosed(c))return false;
@@ -262,17 +294,18 @@ function render(){
     const n=id==="all"?base.length:id==="closed"?L.filter(isClosed).length:base.filter(c=>inSec(c,id)).length;
     if(ordering)return`<span class="chip ord"><button class="mvb" data-mh="${id}" data-d="-1" aria-label="Солға">‹</button><span class="nm">${esc(name)}</span><button class="mvb" data-mh="${id}" data-d="1" aria-label="Оңға">›</button></span>`;
     if(id==="closed")return`<button class="chip" data-k="closed" aria-pressed="${view.counter==="closed"}"><span class="nm">${name}</span><small>${n}</small></button>`;
-    return`<button class="chip" data-s="${id}" aria-pressed="${(id==="sot"?inSot(view.section):view.section===id)&&view.counter!=="closed"}"><span class="nm">${esc(name)}</span><small>${n}</small></button>`}).join("");
+    return`<button class="chip ${id==="fu"&&L.some(c=>c.section==="fu"&&fuAlarm(c))?"fu-alarm":""}" data-s="${id}" aria-pressed="${(id==="sot"?inSot(view.section):view.section===id)&&view.counter!=="closed"}"><span class="nm">${esc(name)}</span><small>${n}</small></button>`}).join("");
   $("chips").classList.toggle("ordg",ordering);
   const showSub=!ordering&&inSot(view.section)&&view.counter!=="closed";$("subchips").hidden=!showSub;
   if(showSub)$("subchips").innerHTML=[["sot","Барлығы"],...SUBS.map(k=>[k,SHORT[k]]),["sot0","Басқа"]].map(([k,nm])=>`<button class="chip" data-s="${k}" aria-pressed="${view.section===k}"><span class="nm">${esc(nm)}</span><small>${base.filter(c=>inSec(c,k)).length}</small></button>`).join("");
   const F=filtered();
   if(!F.length){$("list").innerHTML=`<div class="empty">${L.length?"Бұл сүзгі бойынша іс жоқ.<br><br><button class=\"btn\" id=\"btnReset\">Барлық істерді көрсету</button>":"Әзірге іс жоқ. «Баптау» арқылы GitHub-ты қосыңыз немесе + батырмасымен іс қосыңыз."}</div>`;return}
+  if(view.section==="fu"&&!ordering){$("list").innerHTML=renderFu(F);return}
   if(view.section==="otyrys"&&!ordering){const pp=x=>String(x).padStart(2,"0"),g=[],idx={};
     F.slice().sort((a,b)=>(parseDue(a.due)||8.64e15)-(parseDue(b.due)||8.64e15)).forEach(c=>{const d=parseDue(c.due),k=d?d.toDateString():"none";if(!(k in idx)){idx[k]=g.length;g.push({d,n:d?dayDiff(d):null,L:[]})}g[idx[k]].L.push(c)});
     $("list").innerHTML=g.map(x=>{const h=!x.d?"Күні белгісіз":(x.n===0?"Бүгін · ":x.n===1?"Ертең · ":"")+pp(x.d.getDate())+"."+pp(x.d.getMonth()+1)+" · "+KDAYS[x.d.getDay()];
       return`<div class="wk-h ${x.n===0?"amber":x.n!==null&&x.n<0?"red":""}">${h}</div>`+x.L.map(c=>{const d=parseDue(c.due);return`<button class="row ${urgency(c)}" data-id="${esc(c.id)}"><span class="bar"></span><span class="main"><span class="t">${esc(c.title)}</span></span><span class="side"><span class="due">${d?pp(d.getHours())+":"+pp(d.getMinutes()):"—"}</span></span></button>`}).join("")}).join("");return}
-  $("list").innerHTML=F.map((c,i)=>{const u=urgency(c),d=parseDue(c.due),st=c.steps||[],dn=st.filter(s=>s.done).length,p=c.priority||0;
+  $("list").innerHTML=F.map((c,i)=>{const u=urgency(c),d=c.section==="fu"?(fuNext(c)||{}).d:parseDue(c.due),st=c.steps||[],dn=st.filter(s=>s.done).length,p=c.priority||0;
     if(ordering)return`<div class="row ord ${u}"><span class="bar"></span><span class="main"><span class="t">${esc(c.title)}</span><span class="meta"><span>${esc(secName(c.section))}</span></span></span><span class="side"><button class="mvb" data-mo="${esc(c.id)}" data-d="-1" ${i===0?"disabled":""} aria-label="Жоғары">↑</button><button class="mvb" data-mo="${esc(c.id)}" data-d="1" ${i===F.length-1?"disabled":""} aria-label="Төмен">↓</button></span></div>`;
     return`<button class="row ${u}" data-id="${esc(c.id)}"><span class="bar"></span><span class="main"><span class="t">${p?`<span class="pri p${p}">${"!".repeat(p)}</span>`:""}${esc(c.title)}</span><span class="meta"><span>${esc(SHORT[c.section]||secName(c.section))}</span>${c.status&&c.status!=="Жұмыста"?`<span>· ${esc(c.status)}</span>`:""}${st.length?`<span>· ${dn}/${st.length} кезең</span>`:""}</span>${(()=>{const i=st.findIndex(x=>!x.done);return i<0||isClosed(c)?"":`<span class="nstep" data-ns="${esc(c.id)}" data-si="${i}" role="checkbox" aria-checked="false"><span class="ck"></span><span>${esc(st[i].t)}</span></span>`})()}</span><span class="side">${d?`<span class="due">${fmtDue(d)}</span>${isClosed(c)?"":`<span class="rel">${relText(dayDiff(d))}</span>`}`:`<span class="due" style="color:var(--muted)">мерзімсіз</span>`}</span></button>`}).join("");
 }
@@ -298,7 +331,7 @@ document.addEventListener("click",e=>{
   const k=e.target.closest("[data-k]");if(k){view.counter=(view.counter===k.dataset.k&&k.dataset.k!=="all")?"all":k.dataset.k;saveView();render();return}
   const s=e.target.closest("[data-s]");if(s){view.section=s.dataset.s;saveView();render();return}
   const ns=e.target.closest("[data-ns]");if(ns&&locked){toast("🔒 Құлып қосулы");return}if(ns){if(lpFired){lpFired=false;return}const c=all.find(x=>x.id===ns.dataset.ns),i=+ns.dataset.si;if(c&&c.steps&&c.steps[i]){c.steps[i].done=true;c.updated=nowISO();saveLocal();render();toast("✓ "+c.steps[i].t.slice(0,40))}return}
-  const r=e.target.closest(".row");if(r){if(lpFired){lpFired=false;return}openCase(r.dataset.id);return}
+  const r=e.target.closest(".row,.fu-card");if(r){if(lpFired){lpFired=false;return}openCase(r.dataset.id);return}
 });
 $("q").addEventListener("input",e=>{view.q=e.target.value;render()});
 $("fab").addEventListener("click",()=>{if(locked){toast("🔒 Құлып қосулы");return}openCase(null)});
